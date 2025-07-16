@@ -86,9 +86,26 @@ export interface FinancialData {
       other: { year1: number; year2: number; year3: number; };
     };
     balanceSheet: {
-      fixedAssets: { year1: number; year2: number; year3: number; };
-      accountsReceivable: { year1: number; year2: number; year3: number; };
-      accountsPayable: { year1: number; year2: number; year3: number; };
+      fixedAssets: {
+        assets: {
+          id: string;
+          name: string;
+          cost: number;
+          usefulLife: number; // in years
+          assetClass: 'tangible' | 'intangible';
+          isFromCapitalizedPayroll?: boolean;
+          linkedEmployeeId?: string;
+        }[];
+        year1: number; year2: number; year3: number;
+      };
+      accountsReceivable: {
+        daysLinkedToRevenue: number;
+        year1: number; year2: number; year3: number;
+      };
+      accountsPayable: {
+        daysForPayment: number;
+        year1: number; year2: number; year3: number;
+      };
       cashAndBank: { year1: number; year2: number; year3: number; };
       inventory: { year1: number; year2: number; year3: number; };
       otherAssets: { year1: number; year2: number; year3: number; };
@@ -166,9 +183,18 @@ const Index = () => {
         other: { year1: 0, year2: 0, year3: 0 }
       },
       balanceSheet: {
-        fixedAssets: { year1: 0, year2: 0, year3: 0 },
-        accountsReceivable: { year1: 0, year2: 0, year3: 0 },
-        accountsPayable: { year1: 0, year2: 0, year3: 0 },
+        fixedAssets: {
+          assets: [],
+          year1: 0, year2: 0, year3: 0
+        },
+        accountsReceivable: {
+          daysLinkedToRevenue: 30,
+          year1: 0, year2: 0, year3: 0
+        },
+        accountsPayable: {
+          daysForPayment: 30,
+          year1: 0, year2: 0, year3: 0
+        },
         cashAndBank: { year1: 0, year2: 0, year3: 0 },
         inventory: { year1: 0, year2: 0, year3: 0 },
         otherAssets: { year1: 0, year2: 0, year3: 0 },
