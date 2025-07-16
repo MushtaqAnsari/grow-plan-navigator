@@ -76,9 +76,17 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
   return (
     <div className="space-y-6">
       {revenueStreams.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center text-gray-500">
-            Add revenue streams first to define their associated direct costs
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-6 text-center">
+            <div className="text-orange-600 mb-2">
+              <svg className="w-12 h-12 mx-auto mb-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <p className="text-orange-700 font-medium mb-2">No Revenue Streams Found</p>
+            <p className="text-orange-600 text-sm">
+              Please add revenue streams first in the <strong>"Revenue"</strong> tab, then return here to define their associated direct costs.
+            </p>
           </CardContent>
         </Card>
       ) : (
