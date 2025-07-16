@@ -22,9 +22,8 @@ export interface FinancialData {
     growthRate: number;
   }[];
   costs: {
-    // Revenue stream linked costs
     revenueStreamCosts: {
-      [key: string]: { // Revenue stream name as key
+      [key: string]: {
         directCosts: {
           cogs: { year1: number; year2: number; year3: number; };
           processing: { year1: number; year2: number; year3: number; };
@@ -33,12 +32,35 @@ export interface FinancialData {
         };
       };
     };
-    // General overhead costs not tied to specific revenue
-    overhead: {
-      payroll: { year1: number; year2: number; year3: number; };
-      admin: { year1: number; year2: number; year3: number; };
-      marketing: { year1: number; year2: number; year3: number; };
-      facilities: { year1: number; year2: number; year3: number; };
+    team: {
+      salaries: { year1: number; year2: number; year3: number; };
+      benefits: { year1: number; year2: number; year3: number; };
+      contractors: { year1: number; year2: number; year3: number; };
+      training: { year1: number; year2: number; year3: number; };
+      recruitment: { year1: number; year2: number; year3: number; };
+    };
+    admin: {
+      rent: { year1: number; year2: number; year3: number; };
+      utilities: { year1: number; year2: number; year3: number; };
+      domesticTravel: { year1: number; year2: number; year3: number; };
+      internationalTravel: { year1: number; year2: number; year3: number; };
+      insurance: { year1: number; year2: number; year3: number; };
+      legal: { year1: number; year2: number; year3: number; };
+      accounting: { year1: number; year2: number; year3: number; };
+      software: { year1: number; year2: number; year3: number; };
+      equipment: { year1: number; year2: number; year3: number; };
+      other: { year1: number; year2: number; year3: number; };
+    };
+    marketing: {
+      isPercentageOfRevenue: boolean;
+      percentageOfRevenue: number;
+      manualBudget: { year1: number; year2: number; year3: number; };
+      digitalAdvertising: { year1: number; year2: number; year3: number; };
+      contentCreation: { year1: number; year2: number; year3: number; };
+      events: { year1: number; year2: number; year3: number; };
+      pr: { year1: number; year2: number; year3: number; };
+      brandingDesign: { year1: number; year2: number; year3: number; };
+      tools: { year1: number; year2: number; year3: number; };
       other: { year1: number; year2: number; year3: number; };
     };
   };
@@ -65,11 +87,35 @@ const Index = () => {
     revenueStreams: [],
     costs: {
       revenueStreamCosts: {},
-      overhead: {
-        payroll: { year1: 0, year2: 0, year3: 0 },
-        admin: { year1: 0, year2: 0, year3: 0 },
-        marketing: { year1: 0, year2: 0, year3: 0 },
-        facilities: { year1: 0, year2: 0, year3: 0 },
+      team: {
+        salaries: { year1: 0, year2: 0, year3: 0 },
+        benefits: { year1: 0, year2: 0, year3: 0 },
+        contractors: { year1: 0, year2: 0, year3: 0 },
+        training: { year1: 0, year2: 0, year3: 0 },
+        recruitment: { year1: 0, year2: 0, year3: 0 }
+      },
+      admin: {
+        rent: { year1: 0, year2: 0, year3: 0 },
+        utilities: { year1: 0, year2: 0, year3: 0 },
+        domesticTravel: { year1: 0, year2: 0, year3: 0 },
+        internationalTravel: { year1: 0, year2: 0, year3: 0 },
+        insurance: { year1: 0, year2: 0, year3: 0 },
+        legal: { year1: 0, year2: 0, year3: 0 },
+        accounting: { year1: 0, year2: 0, year3: 0 },
+        software: { year1: 0, year2: 0, year3: 0 },
+        equipment: { year1: 0, year2: 0, year3: 0 },
+        other: { year1: 0, year2: 0, year3: 0 }
+      },
+      marketing: {
+        isPercentageOfRevenue: true,
+        percentageOfRevenue: 10,
+        manualBudget: { year1: 0, year2: 0, year3: 0 },
+        digitalAdvertising: { year1: 0, year2: 0, year3: 0 },
+        contentCreation: { year1: 0, year2: 0, year3: 0 },
+        events: { year1: 0, year2: 0, year3: 0 },
+        pr: { year1: 0, year2: 0, year3: 0 },
+        brandingDesign: { year1: 0, year2: 0, year3: 0 },
+        tools: { year1: 0, year2: 0, year3: 0 },
         other: { year1: 0, year2: 0, year3: 0 }
       }
     },

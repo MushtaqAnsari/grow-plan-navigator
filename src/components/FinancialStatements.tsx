@@ -24,10 +24,19 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
       return sum + Object.values(stream.directCosts).reduce((streamSum, cost) => streamSum + cost[yearKey], 0);
     }, 0);
     
-    // Sum all overhead costs
-    const overheadCosts = Object.values(data.costs.overhead).reduce((sum, cost) => sum + cost[yearKey], 0);
+    // Sum team costs
+    const teamCosts = Object.values(data.costs.team).reduce((sum, cost) => sum + cost[yearKey], 0);
     
-    return directCosts + overheadCosts;
+    // Sum admin costs
+    const adminCosts = Object.values(data.costs.admin).reduce((sum, cost) => sum + cost[yearKey], 0);
+    
+    // Calculate marketing costs
+    const getTotalRevenue = () => data.revenueStreams.reduce((sum, stream) => sum + stream[yearKey], 0);
+    const marketingCosts = data.costs.marketing.isPercentageOfRevenue 
+      ? getTotalRevenue() * (data.costs.marketing.percentageOfRevenue / 100)
+      : data.costs.marketing.manualBudget[yearKey];
+    
+    return directCosts + teamCosts + adminCosts + marketingCosts;
   };
 
   const calculatePayroll = (year: number) => {
