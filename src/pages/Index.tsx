@@ -529,7 +529,7 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="report">
-              <Report data={financialData} />
+              <Report data={financialData} companyData={companyData} />
             </TabsContent>
           </Tabs>
         )}

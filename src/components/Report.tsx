@@ -10,6 +10,10 @@ import { FinancialData } from '../pages/Index';
 
 interface ReportProps {
   data: FinancialData;
+  companyData?: {
+    companyName?: string;
+    industry?: string;
+  };
 }
 
 interface ReportData {
@@ -44,7 +48,7 @@ interface ReportData {
   };
 }
 
-const Report: React.FC<ReportProps> = ({ data }) => {
+const Report: React.FC<ReportProps> = ({ data, companyData }) => {
   // Convert FinancialData to ReportData format
   const convertToReportData = (financialData: FinancialData): ReportData => {
     const directCosts = Object.entries(financialData.costs.revenueStreamCosts).map(([streamName, costs]) => ({
@@ -61,8 +65,8 @@ const Report: React.FC<ReportProps> = ({ data }) => {
     ];
 
     return {
-      companyName: 'EduLearn Platform',
-      industry: 'Technology & Education',
+      companyName: companyData?.companyName || 'Company Name',
+      industry: companyData?.industry || 'Technology',
       revenueStreams: financialData.revenueStreams,
       directCosts,
       operationalExpenses,
