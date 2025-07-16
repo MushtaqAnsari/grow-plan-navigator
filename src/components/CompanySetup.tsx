@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, User, Mail, Phone, MapPin, Globe, Calendar, DollarSign } from 'lucide-react';
+import { Switch } from "@/components/ui/switch";
+import { Building2, User, Mail, Phone, MapPin, Globe, Calendar, DollarSign, Languages } from 'lucide-react';
 
 interface CompanySetupProps {
   onSetupComplete: (companyData: any) => void;
@@ -45,7 +46,24 @@ const fundingStages = [
   { id: 'ipo-ready', name: 'IPO Ready', description: 'Preparing for public offering' }
 ];
 
+const currencies = [
+  { code: 'USD', name: 'US Dollar', symbol: '$' },
+  { code: 'SAR', name: 'Saudi Riyal', symbol: 'ر.س' },
+  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
+  { code: 'EUR', name: 'Euro', symbol: '€' },
+  { code: 'GBP', name: 'British Pound', symbol: '£' },
+  { code: 'EGP', name: 'Egyptian Pound', symbol: 'ج.م' },
+  { code: 'JOD', name: 'Jordanian Dinar', symbol: 'د.ا' },
+  { code: 'KWD', name: 'Kuwaiti Dinar', symbol: 'د.ك' }
+];
+
+const languages = [
+  { code: 'en', name: 'English', nativeName: 'English' },
+  { code: 'ar', name: 'Arabic', nativeName: 'العربية' }
+];
+
 const CompanySetup: React.FC<CompanySetupProps> = ({ onSetupComplete }) => {
+  const [isFounderOperator, setIsFounderOperator] = useState(true);
   const [formData, setFormData] = useState({
     companyName: '',
     industry: '',
@@ -55,21 +73,23 @@ const CompanySetup: React.FC<CompanySetupProps> = ({ onSetupComplete }) => {
     foundedYear: new Date().getFullYear(),
     location: '',
     website: '',
-    // Founder/Operator Information
+    currency: 'USD',
+    language: 'en',
+    // Founder Information
     founderName: '',
     founderEmail: '',
     founderPhone: '',
     founderRole: '',
+    // Operator Information (if different from founder)
+    operatorName: '',
+    operatorEmail: '',
+    operatorPhone: '',
+    operatorRole: '',
     // Business Details
     targetMarket: '',
     businessModel: '',
     keyProducts: '',
-    competitiveAdvantage: '',
-    // Financial Overview
-    currentRevenue: '',
-    projectedRevenue: '',
-    burnRate: '',
-    runway: ''
+    competitiveAdvantage: ''
   });
 
   const handleInputChange = (field: string, value: any) => {
@@ -81,7 +101,21 @@ const CompanySetup: React.FC<CompanySetupProps> = ({ onSetupComplete }) => {
       alert('Please fill in the required fields (Company Name, Industry, and Founder Name)');
       return;
     }
-    onSetupComplete({ ...formData, industry: formData.industry });
+    
+    // If founder is operator, copy founder info to operator fields
+    const finalData = isFounderOperator ? {
+      ...formData,
+      operatorName: formData.founderName,
+      operatorEmail: formData.founderEmail,
+      operatorPhone: formData.founderPhone,
+      operatorRole: formData.founderRole,
+      isFounderOperator: true
+    } : {
+      ...formData,
+      isFounderOperator: false
+    };
+    
+    onSetupComplete({ ...finalData, industry: finalData.industry });
   };
 
   return (
@@ -106,6 +140,63 @@ const CompanySetup: React.FC<CompanySetupProps> = ({ onSetupComplete }) => {
           </CardHeader>
           
           <CardContent className="space-y-8">
+            {/* Settings Row */}
+            <div className="bg-slate-50 rounded-lg p-4 space-y-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Preferences</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Language</Label>
+                  <Select value={formData.language} onValueChange={(value) => handleInputChange('language', value)}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {languages.map((lang) => (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          <div className="flex items-center gap-2">
+                            <Languages className="w-4 h-4" />
+                            <span>{lang.nativeName}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Currency</Label>
+                  <Select value={formData.currency} onValueChange={(value) => handleInputChange('currency', value)}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencies.map((currency) => (
+                        <SelectItem key={currency.code} value={currency.code}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm">{currency.symbol}</span>
+                            <span>{currency.name} ({currency.code})</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Founder is Operator</Label>
+                  <div className="flex items-center space-x-2 h-10">
+                    <Switch
+                      checked={isFounderOperator}
+                      onCheckedChange={setIsFounderOperator}
+                      id="founder-operator"
+                    />
+                    <Label htmlFor="founder-operator" className="text-sm text-slate-600">
+                      {isFounderOperator ? 'Same person' : 'Different people'}
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </div>
             {/* Company Information */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-4">
@@ -314,44 +405,72 @@ const CompanySetup: React.FC<CompanySetupProps> = ({ onSetupComplete }) => {
               </div>
             </div>
 
-            {/* Quick Financial Overview */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <DollarSign className="w-4 h-4 text-primary" />
+            {/* Operator Information - Only show if different from founder */}
+            {!isFounderOperator && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <User className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-800">Operator Information</h3>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-800">Quick Financial Overview</h3>
-                <span className="text-sm text-slate-500">(Optional - can be updated later)</span>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="currentRevenue" className="text-sm font-medium text-slate-700">
-                    Current Annual Revenue
-                  </Label>
-                  <Input
-                    id="currentRevenue"
-                    value={formData.currentRevenue}
-                    onChange={(e) => handleInputChange('currentRevenue', e.target.value)}
-                    placeholder="$0 - $10M+"
-                    className="h-11"
-                  />
-                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="operatorName" className="text-sm font-medium text-slate-700">
+                      Full Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="operatorName"
+                      value={formData.operatorName}
+                      onChange={(e) => handleInputChange('operatorName', e.target.value)}
+                      placeholder="Enter operator's name"
+                      className="h-11"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="projectedRevenue" className="text-sm font-medium text-slate-700">
-                    Projected Revenue (Next Year)
-                  </Label>
-                  <Input
-                    id="projectedRevenue"
-                    value={formData.projectedRevenue}
-                    onChange={(e) => handleInputChange('projectedRevenue', e.target.value)}
-                    placeholder="$0 - $50M+"
-                    className="h-11"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="operatorRole" className="text-sm font-medium text-slate-700">
+                      Role/Title
+                    </Label>
+                    <Input
+                      id="operatorRole"
+                      value={formData.operatorRole}
+                      onChange={(e) => handleInputChange('operatorRole', e.target.value)}
+                      placeholder="COO, General Manager, etc."
+                      className="h-11"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="operatorEmail" className="text-sm font-medium text-slate-700">
+                      Email
+                    </Label>
+                    <Input
+                      id="operatorEmail"
+                      type="email"
+                      value={formData.operatorEmail}
+                      onChange={(e) => handleInputChange('operatorEmail', e.target.value)}
+                      placeholder="operator@company.com"
+                      className="h-11"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="operatorPhone" className="text-sm font-medium text-slate-700">
+                      Phone
+                    </Label>
+                    <Input
+                      id="operatorPhone"
+                      value={formData.operatorPhone}
+                      onChange={(e) => handleInputChange('operatorPhone', e.target.value)}
+                      placeholder="+1 (555) 123-4567"
+                      className="h-11"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-center pt-6">
               <Button 
