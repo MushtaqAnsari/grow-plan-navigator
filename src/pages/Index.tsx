@@ -2,13 +2,14 @@ import IncomeStatement from "@/components/IncomeStatement";
 import Analysis from "@/components/Analysis";
 import ValuationModel from "@/components/ValuationModel";
 import FundUtilization from "@/components/FundUtilization";
+import Valuation from "@/components/Valuation";
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import BalanceSheet from "@/components/BalanceSheet";
 import IndustrySelector from "@/components/IndustrySelector";
-import { BarChart3, FileText, TrendingUp, Users, DollarSign } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target } from "lucide-react";
 
 export interface FinancialData {
   revenueStreams: {
@@ -643,7 +644,7 @@ const Index = () => {
               </div>
             </div>
             
-            <TabsList className="grid w-full grid-cols-5 bg-white shadow-sm">
+            <TabsList className="grid w-full grid-cols-6 bg-white shadow-sm">
               <TabsTrigger value="income-statement" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Income Statement
@@ -651,6 +652,10 @@ const Index = () => {
               <TabsTrigger value="balance-sheet" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
                 Balance Sheet
+              </TabsTrigger>
+              <TabsTrigger value="valuation" className="flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                Valuation
               </TabsTrigger>
               <TabsTrigger value="cap-table" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -697,15 +702,32 @@ const Index = () => {
               </Card>
             </TabsContent>
 
+            <TabsContent value="valuation">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="w-5 h-5" />
+                    Company Valuation
+                  </CardTitle>
+                  <CardDescription>
+                    Multiple valuation methods including revenue multiples, EBITDA multiples, DCF analysis, and football field comparison
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Valuation financialData={financialData} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="cap-table">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="w-5 h-5" />
-                    Capitalization Table & Valuation
+                    Capitalization Table
                   </CardTitle>
                   <CardDescription>
-                    Share ownership, investments, dilution analysis, and company valuation
+                    Share ownership, investments, and dilution analysis
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
