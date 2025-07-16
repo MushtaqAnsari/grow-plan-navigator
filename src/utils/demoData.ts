@@ -28,16 +28,14 @@ export const createCyberLabsDemoData = (): FinancialData => {
           directCosts: {
             cogs: { year1: 60000, year2: 140000, year3: 240000 }, // ~10% of revenue
             processing: { year1: 18000, year2: 42000, year3: 72000 }, // 3% payment processing
-            fulfillment: { year1: 30000, year2: 70000, year3: 120000 }, // 5% customer support
-            support: { year1: 24000, year2: 56000, year3: 96000 } // 4% technical support
+            fulfillment: { year1: 30000, year2: 70000, year3: 120000 } // 5% customer support + tech support
           }
         },
         "Corporate Training Programs": {
           directCosts: {
             cogs: { year1: 45000, year2: 90000, year3: 135000 }, // 30% of consulting revenue
             processing: { year1: 4500, year2: 9000, year3: 13500 }, // 3% payment processing
-            fulfillment: { year1: 7500, year2: 15000, year3: 22500 }, // 5% delivery costs
-            support: { year1: 3000, year2: 6000, year3: 9000 } // 2% support
+            fulfillment: { year1: 10500, year2: 21000, year3: 31500 } // 7% delivery + support costs
           }
         }
       },

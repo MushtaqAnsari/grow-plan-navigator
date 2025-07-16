@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Save } from 'lucide-react';
 import { FinancialData } from "@/pages/Index";
 
 interface RevenueStream {
@@ -24,33 +24,41 @@ interface DirectCostsProps {
 const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStreams }) => {
   const [showAddCustom, setShowAddCustom] = useState(false);
   const [newCostName, setNewCostName] = useState('');
-  const [newCostType, setNewCostType] = useState<'cogs' | 'processing' | 'fulfillment' | 'support'>('cogs');
+  const [newCostType, setNewCostType] = useState<'cogs' | 'processing' | 'fulfillment'>('cogs');
+  const [localData, setLocalData] = useState(data);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Sync localData with props when data changes
+  useEffect(() => {
+    setLocalData(data);
+    setHasChanges(false);
+  }, [data]);
 
   const updateRevenueStreamCost = (
     streamName: string, 
-    costType: 'cogs' | 'processing' | 'fulfillment' | 'support', 
+    costType: 'cogs' | 'processing' | 'fulfillment', 
     year: 'year1' | 'year2' | 'year3', 
     value: number
   ) => {
-    const updatedData = { ...data };
+    const updatedData = { ...localData };
     if (!updatedData[streamName]) {
       updatedData[streamName] = {
         directCosts: {
           cogs: { year1: 0, year2: 0, year3: 0 },
           processing: { year1: 0, year2: 0, year3: 0 },
-          fulfillment: { year1: 0, year2: 0, year3: 0 },
-          support: { year1: 0, year2: 0, year3: 0 }
+          fulfillment: { year1: 0, year2: 0, year3: 0 }
         }
       };
     }
     updatedData[streamName].directCosts[costType][year] = value;
-    onChange(updatedData);
+    setLocalData(updatedData);
+    setHasChanges(true);
   };
 
   const addCustomDirectCost = () => {
     if (!newCostName.trim()) return;
     
-    const updatedData = { ...data };
+    const updatedData = { ...localData };
     const costKey = newCostName.toLowerCase().replace(/\s+/g, '_');
     
     // Add the custom cost to all existing revenue streams
@@ -60,23 +68,25 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
           directCosts: {
             cogs: { year1: 0, year2: 0, year3: 0 },
             processing: { year1: 0, year2: 0, year3: 0 },
-            fulfillment: { year1: 0, year2: 0, year3: 0 },
-            support: { year1: 0, year2: 0, year3: 0 }
+            fulfillment: { year1: 0, year2: 0, year3: 0 }
           }
         };
       }
       
-      // Add the new cost category
-      updatedData[stream.name].directCosts[newCostType] = {
-        year1: 0,
-        year2: 0,
-        year3: 0
-      };
+      if (!updatedData[stream.name].directCosts[costKey]) {
+        updatedData[stream.name].directCosts[costKey] = { year1: 0, year2: 0, year3: 0 };
+      }
     });
     
-    onChange(updatedData);
+    setLocalData(updatedData);
+    setHasChanges(true);
     setNewCostName('');
     setShowAddCustom(false);
+  };
+
+  const handleSave = () => {
+    onChange(localData);
+    setHasChanges(false);
   };
 
   const getDirectCostTypes = (streamType: string) => {
@@ -85,35 +95,57 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
         return [
           { key: 'cogs' as const, label: 'Server/Infrastructure Costs', placeholder: 'Hosting, CDN, etc.' },
           { key: 'processing' as const, label: 'Payment Processing (2-3%)', placeholder: '% of revenue' },
-          { key: 'support' as const, label: 'Customer Support', placeholder: 'Support staff costs' },
           { key: 'fulfillment' as const, label: 'Onboarding/Setup', placeholder: 'Implementation costs' }
         ];
       case 'ecommerce':
         return [
           { key: 'cogs' as const, label: 'Cost of Goods Sold', placeholder: 'Product costs' },
           { key: 'fulfillment' as const, label: 'Shipping & Fulfillment', placeholder: 'Logistics costs' },
-          { key: 'processing' as const, label: 'Payment Processing', placeholder: '% of revenue' },
-          { key: 'support' as const, label: 'Customer Service', placeholder: 'Support costs' }
+          { key: 'processing' as const, label: 'Payment Processing', placeholder: '% of revenue' }
         ];
       case 'advertising':
         return [
           { key: 'cogs' as const, label: 'Content Creation', placeholder: 'Ad content costs' },
           { key: 'processing' as const, label: 'Platform Fees', placeholder: 'Ad platform fees' },
-          { key: 'support' as const, label: 'Campaign Management', placeholder: 'Management costs' },
-          { key: 'fulfillment' as const, label: 'Analytics Tools', placeholder: 'Tracking tools' }
+          { key: 'fulfillment' as const, label: 'Campaign Management', placeholder: 'Management costs' }
         ];
       default:
         return [
-          { key: 'cogs' as const, label: 'Direct Costs', placeholder: 'Direct service costs' },
+          { key: 'cogs' as const, label: 'Cost of Goods/Services', placeholder: 'Direct costs' },
           { key: 'processing' as const, label: 'Processing Fees', placeholder: 'Transaction fees' },
-          { key: 'fulfillment' as const, label: 'Delivery/Fulfillment', placeholder: 'Delivery costs' },
-          { key: 'support' as const, label: 'Support Costs', placeholder: 'Customer support' }
+          { key: 'fulfillment' as const, label: 'Fulfillment Costs', placeholder: 'Delivery costs' }
         ];
     }
   };
 
+  const calculateTotalDirectCosts = () => {
+    const totals = { year1: 0, year2: 0, year3: 0 };
+    
+    Object.values(localData).forEach(streamData => {
+      Object.values(streamData.directCosts).forEach(costData => {
+        totals.year1 += costData.year1 || 0;
+        totals.year2 += costData.year2 || 0;
+        totals.year3 += costData.year3 || 0;
+      });
+    });
+    
+    return totals;
+  };
+
   return (
     <div className="space-y-6">
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleSave} 
+          disabled={!hasChanges}
+          className="bg-primary hover:bg-primary/90 flex items-center gap-2"
+        >
+          <Save className="w-4 h-4" />
+          Save Direct Costs
+        </Button>
+      </div>
+
       {/* Add Custom Direct Cost Button */}
       {revenueStreams.length > 0 && (
         <Card className="border-dashed border-2 border-blue-200">
@@ -146,15 +178,14 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
                   </div>
                   <div>
                     <Label>Cost Type</Label>
-                    <Select value={newCostType} onValueChange={(value: any) => setNewCostType(value)}>
+                    <Select value={newCostType} onValueChange={(value: 'cogs' | 'processing' | 'fulfillment') => setNewCostType(value)}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select cost type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cogs">Cost of Goods Sold</SelectItem>
+                        <SelectItem value="cogs">Cost of Goods/Services</SelectItem>
                         <SelectItem value="processing">Processing Fees</SelectItem>
-                        <SelectItem value="fulfillment">Fulfillment/Delivery</SelectItem>
-                        <SelectItem value="support">Support/Service</SelectItem>
+                        <SelectItem value="fulfillment">Fulfillment Costs</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -205,58 +236,89 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {getDirectCostTypes(stream.type).map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <Label className="text-sm font-medium">{label}</Label>
-                  <div className="grid grid-cols-3 gap-3 mt-2">
-                    {['year1', 'year2', 'year3'].map((year) => (
+            <CardContent className="space-y-6">
+              {/* Standard cost types */}
+              {getDirectCostTypes(stream.type).map((costType) => (
+                <div key={costType.key} className="space-y-3">
+                  <h5 className="font-medium text-sm text-slate-600">{costType.label}</h5>
+                  <div className="grid grid-cols-3 gap-4">
+                    {['year1', 'year2', 'year3'].map(year => (
                       <div key={year}>
-                        <Label className="text-xs text-gray-500">
-                          {year === 'year1' ? 'Year 1' : year === 'year2' ? 'Year 2' : 'Year 3'} ($)
-                        </Label>
+                        <Label className="text-xs text-slate-500">{year.replace('year', 'Year ')} ($)</Label>
                         <Input
                           type="number"
-                          placeholder="0"
-                          value={data[stream.name]?.directCosts[key]?.[year as 'year1' | 'year2' | 'year3'] || ''}
+                          placeholder={costType.placeholder}
+                          value={localData[stream.name]?.directCosts?.[costType.key]?.[year] || ''}
                           onChange={(e) => updateRevenueStreamCost(
                             stream.name, 
-                            key, 
+                            costType.key, 
                             year as 'year1' | 'year2' | 'year3', 
-                            Number(e.target.value)
+                            parseFloat(e.target.value) || 0
                           )}
+                          className="border-slate-200"
                         />
                       </div>
                     ))}
                   </div>
                 </div>
               ))}
+
+              {/* Custom cost types */}
+              {localData[stream.name] && (
+                Object.keys(localData[stream.name]?.directCosts || {}).map(costKey => {
+                  if (['cogs', 'processing', 'fulfillment'].includes(costKey)) return null;
+                  
+                  return (
+                    <div key={costKey} className="space-y-3">
+                      <h5 className="font-medium text-sm text-slate-600 capitalize">
+                        {costKey.replace(/_/g, ' ')}
+                      </h5>
+                      <div className="grid grid-cols-3 gap-4">
+                        {['year1', 'year2', 'year3'].map(year => (
+                          <div key={year}>
+                            <Label className="text-xs text-slate-500">{year.replace('year', 'Year ')} ($)</Label>
+                            <Input
+                              type="number"
+                              value={localData[stream.name]?.directCosts?.[costKey]?.[year] || ''}
+                              onChange={(e) => {
+                                const updatedData = { ...localData };
+                                if (!updatedData[stream.name]?.directCosts?.[costKey]) return;
+                                updatedData[stream.name].directCosts[costKey][year] = parseFloat(e.target.value) || 0;
+                                setLocalData(updatedData);
+                                setHasChanges(true);
+                              }}
+                              className="border-slate-200"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </CardContent>
           </Card>
         ))
       )}
 
-      {/* Direct Costs Summary */}
-      {revenueStreams.length > 0 && Object.keys(data).length > 0 && (
-        <Card className="bg-red-50 border-red-200">
+      {/* Summary */}
+      {revenueStreams.length > 0 && (
+        <Card className="bg-blue-50 border-blue-200">
           <CardHeader>
-            <CardTitle className="text-red-800">Total Direct Costs Summary</CardTitle>
+            <CardTitle className="text-blue-800 flex items-center gap-2">
+              Total Direct Costs Summary
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-6">
               {['year1', 'year2', 'year3'].map((year, index) => {
-                const totalCosts = Object.values(data).reduce((total, streamCosts) => {
-                  return total + Object.values(streamCosts.directCosts).reduce((sum, cost) => {
-                    return sum + (cost[year as 'year1' | 'year2' | 'year3'] || 0);
-                  }, 0);
-                }, 0);
-                
+                const totals = calculateTotalDirectCosts();
                 return (
                   <div key={year} className="text-center">
-                    <p className="text-2xl font-bold text-red-600">
-                      ${totalCosts.toLocaleString()}
-                    </p>
-                    <p className="text-sm text-red-700">Year {index + 1}</p>
+                    <div className="text-2xl font-bold text-blue-600">
+                      ${totals[year as keyof typeof totals].toLocaleString()}
+                    </div>
+                    <div className="text-sm text-blue-700">Year {index + 1}</div>
                   </div>
                 );
               })}

@@ -56,8 +56,7 @@ const Valuation: React.FC<ValuationProps> = ({ financialData }) => {
         totalCosts[year as keyof typeof totalCosts] += 
           streamCosts.directCosts.cogs[year as keyof typeof streamCosts.directCosts.cogs] +
           streamCosts.directCosts.processing[year as keyof typeof streamCosts.directCosts.processing] +
-          streamCosts.directCosts.fulfillment[year as keyof typeof streamCosts.directCosts.fulfillment] +
-          streamCosts.directCosts.support[year as keyof typeof streamCosts.directCosts.support];
+          streamCosts.directCosts.fulfillment[year as keyof typeof streamCosts.directCosts.fulfillment];
       });
     });
 

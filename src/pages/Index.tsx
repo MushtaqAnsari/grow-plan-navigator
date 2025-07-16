@@ -32,7 +32,6 @@ export interface FinancialData {
           cogs: { year1: number; year2: number; year3: number; };
           processing: { year1: number; year2: number; year3: number; };
           fulfillment: { year1: number; year2: number; year3: number; };
-          support: { year1: number; year2: number; year3: number; };
         };
       };
     };
