@@ -306,25 +306,24 @@ export const useFinancialData = (userId: string | undefined) => {
     try {
       // Save revenue streams
       // Always delete existing streams first to handle removals
-      const res = await supabase
+      await supabase
         .from('revenue_streams')
         .delete()
         .eq('financial_model_id', currentModelId);
-
-      
-      console.log(currentModelId, res)
 
       if (data.revenueStreams.length > 0) {
         // Insert new streams
         await supabase
           .from('revenue_streams')
-          .insert({
+          .insert(
+            data.revenueStreams.map(stream => ({
               financial_model_id: currentModelId,
-              name: data.revenueStreams[data.revenueStreams.length - 1].name,
-              year1: data.revenueStreams[data.revenueStreams.length - 1].year1,
-              year2: data.revenueStreams[data.revenueStreams.length - 1].year2,
-              year3: data.revenueStreams[data.revenueStreams.length - 1].year3
-            });
+              name: stream.name,
+              year1: stream.year1,
+              year2: stream.year2,
+              year3: stream.year3
+            }))
+          );
       }
 
       // Save taxation data
@@ -388,6 +387,8 @@ export const useFinancialData = (userId: string | undefined) => {
       ...financialData!,
       [section]: data
     };
+
+    console.log(newData)
     setFinancialData(newData);
     
     // Auto-save after a short delay
