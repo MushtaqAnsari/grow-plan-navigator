@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Trash2 } from 'lucide-react';
 import { FinancialData } from "@/pages/Index";
 
 interface RevenueStream {
@@ -19,6 +22,10 @@ interface DirectCostsProps {
 }
 
 const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStreams }) => {
+  const [showAddCustom, setShowAddCustom] = useState(false);
+  const [newCostName, setNewCostName] = useState('');
+  const [newCostType, setNewCostType] = useState<'cogs' | 'processing' | 'fulfillment' | 'support'>('cogs');
+
   const updateRevenueStreamCost = (
     streamName: string, 
     costType: 'cogs' | 'processing' | 'fulfillment' | 'support', 
@@ -38,6 +45,38 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
     }
     updatedData[streamName].directCosts[costType][year] = value;
     onChange(updatedData);
+  };
+
+  const addCustomDirectCost = () => {
+    if (!newCostName.trim()) return;
+    
+    const updatedData = { ...data };
+    const costKey = newCostName.toLowerCase().replace(/\s+/g, '_');
+    
+    // Add the custom cost to all existing revenue streams
+    revenueStreams.forEach(stream => {
+      if (!updatedData[stream.name]) {
+        updatedData[stream.name] = {
+          directCosts: {
+            cogs: { year1: 0, year2: 0, year3: 0 },
+            processing: { year1: 0, year2: 0, year3: 0 },
+            fulfillment: { year1: 0, year2: 0, year3: 0 },
+            support: { year1: 0, year2: 0, year3: 0 }
+          }
+        };
+      }
+      
+      // Add the new cost category
+      updatedData[stream.name].directCosts[newCostType] = {
+        year1: 0,
+        year2: 0,
+        year3: 0
+      };
+    });
+    
+    onChange(updatedData);
+    setNewCostName('');
+    setShowAddCustom(false);
   };
 
   const getDirectCostTypes = (streamType: string) => {
@@ -75,6 +114,72 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
 
   return (
     <div className="space-y-6">
+      {/* Add Custom Direct Cost Button */}
+      {revenueStreams.length > 0 && (
+        <Card className="border-dashed border-2 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Add Custom Direct Cost Category
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!showAddCustom ? (
+              <Button 
+                onClick={() => setShowAddCustom(true)}
+                variant="outline" 
+                className="w-full"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Direct Cost Category
+              </Button>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Cost Category Name</Label>
+                    <Input
+                      placeholder="e.g., Raw Materials, Licensing Fees"
+                      value={newCostName}
+                      onChange={(e) => setNewCostName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Cost Type</Label>
+                    <Select value={newCostType} onValueChange={(value: any) => setNewCostType(value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cogs">Cost of Goods Sold</SelectItem>
+                        <SelectItem value="processing">Processing Fees</SelectItem>
+                        <SelectItem value="fulfillment">Fulfillment/Delivery</SelectItem>
+                        <SelectItem value="support">Support/Service</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={addCustomDirectCost} className="flex-1">
+                    Add Cost Category
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowAddCustom(false);
+                      setNewCostName('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Existing Revenue Stream Costs */}
       {revenueStreams.length === 0 ? (
         <Card className="border-orange-200 bg-orange-50">
           <CardContent className="p-6 text-center">
@@ -129,6 +234,35 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
             </CardContent>
           </Card>
         ))
+      )}
+
+      {/* Direct Costs Summary */}
+      {revenueStreams.length > 0 && Object.keys(data).length > 0 && (
+        <Card className="bg-red-50 border-red-200">
+          <CardHeader>
+            <CardTitle className="text-red-800">Total Direct Costs Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              {['year1', 'year2', 'year3'].map((year, index) => {
+                const totalCosts = Object.values(data).reduce((total, streamCosts) => {
+                  return total + Object.values(streamCosts.directCosts).reduce((sum, cost) => {
+                    return sum + (cost[year as 'year1' | 'year2' | 'year3'] || 0);
+                  }, 0);
+                }, 0);
+                
+                return (
+                  <div key={year} className="text-center">
+                    <p className="text-2xl font-bold text-red-600">
+                      ${totalCosts.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-red-700">Year {index + 1}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

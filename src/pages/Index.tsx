@@ -195,9 +195,15 @@ export interface FinancialData {
 
 const Index = () => {
   const { user, signOut } = useAuth();
-  const { financialData, loading, updateFinancialData } = useFinancialData(user?.id);
-  const [industry, setIndustry] = useState<string>("");
-  const [companyData, setCompanyData] = useState<any>(null);
+  const { 
+    financialData, 
+    loading, 
+    updateFinancialData, 
+    companyData, 
+    setCompanyData, 
+    industry, 
+    setIndustry 
+  } = useFinancialData(user?.id);
   const [activeTab, setActiveTab] = useState("income-statement");
 
   // Show loading while data is being fetched

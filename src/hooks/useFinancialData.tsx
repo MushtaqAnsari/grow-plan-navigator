@@ -8,6 +8,8 @@ export const useFinancialData = (userId: string | undefined) => {
   const [financialData, setFinancialData] = useState<FinancialData | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentModelId, setCurrentModelId] = useState<string | null>(null);
+  const [companyData, setCompanyData] = useState<any>(null);
+  const [industry, setIndustry] = useState<string>("");
 
   // Load financial data when user is available
   useEffect(() => {
@@ -165,18 +167,32 @@ export const useFinancialData = (userId: string | undefined) => {
         operationalExpensesResult,
         employeePlanningResult,
         loansFinancingResult,
-        taxationResult
+        taxationResult,
+        financialModelResult
       ] = await Promise.all([
         supabase.from('revenue_streams').select('*').eq('financial_model_id', modelId),
         supabase.from('cost_structures').select('*').eq('financial_model_id', modelId),
         supabase.from('operational_expenses').select('*').eq('financial_model_id', modelId),
         supabase.from('employee_planning').select('*').eq('financial_model_id', modelId),
         supabase.from('loans_financing').select('*').eq('financial_model_id', modelId),
-        supabase.from('taxation').select('*').eq('financial_model_id', modelId)
+        supabase.from('taxation').select('*').eq('financial_model_id', modelId),
+        supabase.from('financial_models').select('*').eq('id', modelId).single()
       ]);
 
       // Build financial data from database results
       const defaultData = createDefaultFinancialData();
+
+      // Load company data from financial model
+      if (financialModelResult.data) {
+        const loadedCompanyData = {
+          companyName: financialModelResult.data.company_name,
+          industry: financialModelResult.data.industry,
+          currency: financialModelResult.data.currency,
+          language: financialModelResult.data.language
+        };
+        setCompanyData(loadedCompanyData);
+        setIndustry(financialModelResult.data.industry || '');
+      }
 
       // Map revenue streams
       if (revenueStreamsResult.data && revenueStreamsResult.data.length > 0) {
@@ -253,6 +269,37 @@ export const useFinancialData = (userId: string | undefined) => {
     }
   };
 
+  const saveCompanyData = async (data: any) => {
+    if (!userId || !currentModelId) return;
+
+    try {
+      await supabase
+        .from('financial_models')
+        .update({
+          company_name: data.companyName,
+          industry: data.industry,
+          currency: data.currency,
+          language: data.language
+        })
+        .eq('id', currentModelId);
+
+      setCompanyData(data);
+      setIndustry(data.industry);
+
+      toast({
+        title: "Company Data Saved",
+        description: "Your company information has been saved.",
+      });
+    } catch (error) {
+      console.error('Error saving company data:', error);
+      toast({
+        title: "Save Error",
+        description: "Failed to save company data.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const saveFinancialData = async (data: FinancialData) => {
     if (!userId || !currentModelId) return;
 
@@ -325,11 +372,6 @@ export const useFinancialData = (userId: string | undefined) => {
         description: "Your financial data has been saved successfully.",
       });
 
-      // Reload data to ensure UI is in sync
-      setTimeout(() => {
-        loadFinancialData();
-      }, 500);
-
     } catch (error) {
       console.error('Error saving financial data:', error);
       toast({
@@ -358,6 +400,10 @@ export const useFinancialData = (userId: string | undefined) => {
     loading,
     updateFinancialData,
     saveFinancialData: () => financialData && saveFinancialData(financialData),
-    loadFinancialData
+    loadFinancialData,
+    companyData,
+    setCompanyData: saveCompanyData,
+    industry,
+    setIndustry
   };
 };
