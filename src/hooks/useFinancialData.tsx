@@ -186,9 +186,20 @@ export const useFinancialData = (userId: string | undefined) => {
           year1: stream.year1 || 0,
           year2: stream.year2 || 0,
           year3: stream.year3 || 0,
-          growthRate: 0, // Not in DB schema
+          growthRate: 0, // Calculate growth rate
           arDays: 0 // Not in DB schema
         }));
+
+        // Calculate growth rates for loaded streams
+        defaultData.revenueStreams = defaultData.revenueStreams.map(stream => {
+          if (stream.year1 > 0 && stream.year2 > 0) {
+            return {
+              ...stream,
+              growthRate: ((stream.year2 - stream.year1) / stream.year1) * 100
+            };
+          }
+          return stream;
+        });
       }
 
       // Map taxation data
@@ -247,13 +258,13 @@ export const useFinancialData = (userId: string | undefined) => {
 
     try {
       // Save revenue streams
-      if (data.revenueStreams.length > 0) {
-        // Delete existing streams first
-        await supabase
-          .from('revenue_streams')
-          .delete()
-          .eq('financial_model_id', currentModelId);
+      // Always delete existing streams first to handle removals
+      await supabase
+        .from('revenue_streams')
+        .delete()
+        .eq('financial_model_id', currentModelId);
 
+      if (data.revenueStreams.length > 0) {
         // Insert new streams
         await supabase
           .from('revenue_streams')
@@ -313,6 +324,11 @@ export const useFinancialData = (userId: string | undefined) => {
         title: "Data Saved",
         description: "Your financial data has been saved successfully.",
       });
+
+      // Reload data to ensure UI is in sync
+      setTimeout(() => {
+        loadFinancialData();
+      }, 500);
 
     } catch (error) {
       console.error('Error saving financial data:', error);
