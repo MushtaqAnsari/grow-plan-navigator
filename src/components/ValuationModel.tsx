@@ -1,285 +1,567 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FinancialData } from "@/pages/Index";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { Trash2, Plus, Users, TrendingUp, Percent } from 'lucide-react';
 
-interface ValuationModelProps {
-  data: FinancialData;
+interface ShareClass {
+  id: string;
+  name: string;
+  type: 'common' | 'preferred' | 'option-pool';
+  shares: number;
+  pricePerShare: number;
+  liquidationPreference?: number;
+  preferenceMultiple?: number;
+  participationRights?: boolean;
 }
 
-const ValuationModel: React.FC<ValuationModelProps> = ({ data }) => {
-  const [industry, setIndustry] = useState('saas');
-  const [customMultiple, setCustomMultiple] = useState<number>(0);
+interface Investment {
+  id: string;
+  investorName: string;
+  round: string;
+  amount: number;
+  shareClass: string;
+  shares: number;
+  pricePerShare: number;
+  date: string;
+  valuation: number;
+}
 
-  // Industry multiples (Price to Revenue ratios)
-  const industryMultiples = {
-    saas: { name: 'SaaS/Software', multiple: 8 },
-    ecommerce: { name: 'E-commerce', multiple: 3 },
-    fintech: { name: 'FinTech', multiple: 6 },
-    healthtech: { name: 'HealthTech', multiple: 7 },
-    marketplace: { name: 'Marketplace', multiple: 5 },
-    hardware: { name: 'Hardware', multiple: 2 },
-    consulting: { name: 'Consulting/Services', multiple: 1.5 },
-    custom: { name: 'Custom Multiple', multiple: customMultiple }
-  };
+interface CapTableData {
+  shareClasses: ShareClass[];
+  investments: Investment[];
+  companyValuation: number;
+}
 
-  const calculateTotalRevenue = (year: number) => {
-    const yearKey = `year${year}` as 'year1' | 'year2' | 'year3';
-    return data.revenueStreams.reduce((sum, stream) => sum + stream[yearKey], 0);
-  };
-
-  const calculateTotalCosts = (year: number) => {
-    const yearKey = `year${year}` as 'year1' | 'year2' | 'year3';
-    return Object.values(data.costs).reduce((sum, category) => sum + category[yearKey], 0);
-  };
-
-  const calculatePayroll = (year: number) => {
-    return data.costs.team.employees
-      .reduce((sum, emp) => sum + emp.salary, 0);
-  };
-
-  // Calculate key metrics for valuation
-  const year3Revenue = calculateTotalRevenue(3);
-  const year3Costs = calculateTotalCosts(3);
-  const year3Payroll = calculatePayroll(3);
-  const year3NetIncome = year3Revenue - year3Costs - year3Payroll;
-  
-  const selectedMultiple = industryMultiples[industry as keyof typeof industryMultiples];
-  const revenueMultipleValuation = year3Revenue * selectedMultiple.multiple;
-  
-  // DCF calculation (simplified)
-  const discountRate = 0.12; // 12% discount rate
-  const terminalGrowthRate = 0.03; // 3% terminal growth
-  
-  const cashFlows = [1, 2, 3].map(year => {
-    const revenue = calculateTotalRevenue(year);
-    const costs = calculateTotalCosts(year);
-    const payroll = calculatePayroll(year);
-    return revenue - costs - payroll;
+const ValuationModel = () => {
+  const [capTableData, setCapTableData] = useState<CapTableData>({
+    shareClasses: [
+      {
+        id: '1',
+        name: 'Founder Shares',
+        type: 'common',
+        shares: 8000000,
+        pricePerShare: 0.001
+      },
+      {
+        id: '2',
+        name: 'Employee Option Pool',
+        type: 'option-pool',
+        shares: 2000000,
+        pricePerShare: 0.001
+      }
+    ],
+    investments: [
+      {
+        id: '1',
+        investorName: 'Founders',
+        round: 'Initial',
+        amount: 8000,
+        shareClass: 'Founder Shares',
+        shares: 8000000,
+        pricePerShare: 0.001,
+        date: '2024-01-01',
+        valuation: 10000
+      }
+    ],
+    companyValuation: 10000000
   });
 
-  const presentValues = cashFlows.map((cf, index) => cf / Math.pow(1 + discountRate, index + 1));
-  const terminalValue = (cashFlows[2] * (1 + terminalGrowthRate)) / (discountRate - terminalGrowthRate);
-  const presentValueTerminal = terminalValue / Math.pow(1 + discountRate, 3);
-  const dcfValuation = presentValues.reduce((sum, pv) => sum + pv, 0) + presentValueTerminal;
+  const [newShareClass, setNewShareClass] = useState<Partial<ShareClass>>({
+    name: '',
+    type: 'common',
+    shares: 0,
+    pricePerShare: 0
+  });
 
-  // Risk assessment based on financial health
-  const getRiskLevel = () => {
-    const totalRevenue = year3Revenue;
-    const profitMargin = totalRevenue > 0 ? (year3NetIncome / totalRevenue) * 100 : 0;
-    const hasConsistentGrowth = calculateTotalRevenue(3) > calculateTotalRevenue(2) && calculateTotalRevenue(2) > calculateTotalRevenue(1);
-    
-    if (profitMargin > 20 && hasConsistentGrowth && totalRevenue > 1000000) return 'Low';
-    if (profitMargin > 10 && hasConsistentGrowth) return 'Medium';
-    if (profitMargin > 0) return 'Medium-High';
-    return 'High';
+  const [newInvestment, setNewInvestment] = useState<Partial<Investment>>({
+    investorName: '',
+    round: '',
+    amount: 0,
+    shareClass: '',
+    date: ''
+  });
+
+  const totalShares = capTableData.shareClasses.reduce((sum, sc) => sum + sc.shares, 0);
+  
+  const addShareClass = () => {
+    if (newShareClass.name && newShareClass.shares && newShareClass.pricePerShare) {
+      setCapTableData(prev => ({
+        ...prev,
+        shareClasses: [
+          ...prev.shareClasses,
+          {
+            id: Date.now().toString(),
+            name: newShareClass.name!,
+            type: newShareClass.type!,
+            shares: newShareClass.shares!,
+            pricePerShare: newShareClass.pricePerShare!,
+            liquidationPreference: newShareClass.liquidationPreference,
+            preferenceMultiple: newShareClass.preferenceMultiple,
+            participationRights: newShareClass.participationRights
+          }
+        ]
+      }));
+      setNewShareClass({ name: '', type: 'common', shares: 0, pricePerShare: 0 });
+    }
   };
 
-  const riskLevel = getRiskLevel();
-  const riskAdjustment = {
-    'Low': 1.0,
-    'Medium': 0.85,
-    'Medium-High': 0.7,
-    'High': 0.5
-  }[riskLevel];
+  const addInvestment = () => {
+    if (newInvestment.investorName && newInvestment.amount && newInvestment.shareClass) {
+      const shareClass = capTableData.shareClasses.find(sc => sc.name === newInvestment.shareClass);
+      if (shareClass) {
+        const shares = newInvestment.amount! / shareClass.pricePerShare;
+        setCapTableData(prev => ({
+          ...prev,
+          investments: [
+            ...prev.investments,
+            {
+              id: Date.now().toString(),
+              investorName: newInvestment.investorName!,
+              round: newInvestment.round!,
+              amount: newInvestment.amount!,
+              shareClass: newInvestment.shareClass!,
+              shares: shares,
+              pricePerShare: shareClass.pricePerShare,
+              date: newInvestment.date!,
+              valuation: capTableData.companyValuation
+            }
+          ]
+        }));
+        setNewInvestment({ investorName: '', round: '', amount: 0, shareClass: '', date: '' });
+      }
+    }
+  };
 
-  const adjustedValuation = revenueMultipleValuation * riskAdjustment;
+  const ownershipData = capTableData.shareClasses.map(sc => ({
+    name: sc.name,
+    shares: sc.shares,
+    percentage: (sc.shares / totalShares) * 100,
+    value: sc.shares * sc.pricePerShare
+  }));
 
-  // Valuation comparison data
-  const valuationMethods = [
-    { method: 'Revenue Multiple', value: revenueMultipleValuation, color: '#3b82f6' },
-    { method: 'Risk Adjusted', value: adjustedValuation, color: '#10b981' },
-    { method: 'DCF Model', value: Math.max(0, dcfValuation), color: '#f59e0b' }
+  const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', '#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+
+  const dilutionScenarios = [
+    { scenario: 'Series A - $2M', newShares: 2000000, pricePerShare: 1.0 },
+    { scenario: 'Series B - $5M', newShares: 2500000, pricePerShare: 2.0 },
+    { scenario: 'Series C - $10M', newShares: 2000000, pricePerShare: 5.0 }
   ];
 
-  // Funding needs analysis
-  const cumulativeCashFlow = cashFlows.reduce((acc, cf, index) => {
-    const prev = index > 0 ? acc[index - 1] : data.funding.totalFunding;
-    acc.push(prev + cf);
-    return acc;
-  }, [] as number[]);
-
-  const fundingGap = Math.min(...cumulativeCashFlow);
-  const additionalFundingNeeded = fundingGap < 0 ? Math.abs(fundingGap) : 0;
-
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b'];
+  const calculateDilution = (newShares: number) => {
+    const newTotal = totalShares + newShares;
+    return ownershipData.map(item => ({
+      ...item,
+      newPercentage: (item.shares / newTotal) * 100,
+      dilution: ((item.shares / totalShares) * 100) - ((item.shares / newTotal) * 100)
+    }));
+  };
 
   return (
     <div className="space-y-6">
-      {/* Valuation Parameters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Valuation Parameters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="industry-select">Industry Sector</Label>
-              <Select value={industry} onValueChange={setIndustry}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select industry" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(industryMultiples).map(([key, value]) => {
-                    if (key === 'custom') return null;
-                    return (
-                      <SelectItem key={key} value={key}>
-                        {value.name} ({value.multiple}x Revenue)
-                      </SelectItem>
-                    );
-                  })}
-                  <SelectItem value="custom">Custom Multiple</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {industry === 'custom' && (
-              <div>
-                <Label htmlFor="custom-multiple">Custom Revenue Multiple</Label>
-                <Input
-                  id="custom-multiple"
-                  type="number"
-                  step="0.1"
-                  placeholder="e.g., 5.0"
-                  value={customMultiple || ''}
-                  onChange={(e) => setCustomMultiple(Number(e.target.value))}
-                />
+      <Tabs defaultValue="cap-table" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="cap-table">Cap Table</TabsTrigger>
+          <TabsTrigger value="ownership">Ownership</TabsTrigger>
+          <TabsTrigger value="dilution">Dilution Analysis</TabsTrigger>
+          <TabsTrigger value="valuation">Valuation Model</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="cap-table" className="space-y-6">
+          {/* Share Classes */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Share Classes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Class Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Shares</TableHead>
+                      <TableHead>Price/Share</TableHead>
+                      <TableHead>Total Value</TableHead>
+                      <TableHead>% Ownership</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {capTableData.shareClasses.map((sc) => (
+                      <TableRow key={sc.id}>
+                        <TableCell className="font-medium">{sc.name}</TableCell>
+                        <TableCell className="capitalize">{sc.type.replace('-', ' ')}</TableCell>
+                        <TableCell>{sc.shares.toLocaleString()}</TableCell>
+                        <TableCell>${sc.pricePerShare.toFixed(3)}</TableCell>
+                        <TableCell>${(sc.shares * sc.pricePerShare).toLocaleString()}</TableCell>
+                        <TableCell>{((sc.shares / totalShares) * 100).toFixed(2)}%</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCapTableData(prev => ({
+                              ...prev,
+                              shareClasses: prev.shareClasses.filter(s => s.id !== sc.id)
+                            }))}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {/* Add New Share Class */}
+                <div className="border rounded-lg p-4 bg-muted/20">
+                  <h4 className="font-medium mb-3">Add New Share Class</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div>
+                      <Label htmlFor="className">Class Name</Label>
+                      <Input
+                        id="className"
+                        value={newShareClass.name}
+                        onChange={(e) => setNewShareClass(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g., Series A Preferred"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="classType">Type</Label>
+                      <Select
+                        value={newShareClass.type}
+                        onValueChange={(value: 'common' | 'preferred' | 'option-pool') => 
+                          setNewShareClass(prev => ({ ...prev, type: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="common">Common</SelectItem>
+                          <SelectItem value="preferred">Preferred</SelectItem>
+                          <SelectItem value="option-pool">Option Pool</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="shares">Shares</Label>
+                      <Input
+                        id="shares"
+                        type="number"
+                        value={newShareClass.shares}
+                        onChange={(e) => setNewShareClass(prev => ({ ...prev, shares: Number(e.target.value) }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="pricePerShare">Price/Share ($)</Label>
+                      <Input
+                        id="pricePerShare"
+                        type="number"
+                        step="0.001"
+                        value={newShareClass.pricePerShare}
+                        onChange={(e) => setNewShareClass(prev => ({ ...prev, pricePerShare: Number(e.target.value) }))}
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button onClick={addShareClass} className="w-full">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Class
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Valuation Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Company Valuation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={valuationMethods}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="method" />
-                <YAxis />
-                <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
-                <Bar dataKey="value" fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          {/* Investments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Investment History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Investor</TableHead>
+                      <TableHead>Round</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Share Class</TableHead>
+                      <TableHead>Shares</TableHead>
+                      <TableHead>Price/Share</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {capTableData.investments.map((inv) => (
+                      <TableRow key={inv.id}>
+                        <TableCell className="font-medium">{inv.investorName}</TableCell>
+                        <TableCell>{inv.round}</TableCell>
+                        <TableCell>${inv.amount.toLocaleString()}</TableCell>
+                        <TableCell>{inv.shareClass}</TableCell>
+                        <TableCell>{inv.shares.toLocaleString()}</TableCell>
+                        <TableCell>${inv.pricePerShare.toFixed(3)}</TableCell>
+                        <TableCell>{inv.date}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCapTableData(prev => ({
+                              ...prev,
+                              investments: prev.investments.filter(i => i.id !== inv.id)
+                            }))}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Valuation Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={valuationMethods}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ method, value }) => `${method}: $${(value/1000000).toFixed(1)}M`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {valuationMethods.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+                {/* Add New Investment */}
+                <div className="border rounded-lg p-4 bg-muted/20">
+                  <h4 className="font-medium mb-3">Add New Investment</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div>
+                      <Label htmlFor="investorName">Investor Name</Label>
+                      <Input
+                        id="investorName"
+                        value={newInvestment.investorName}
+                        onChange={(e) => setNewInvestment(prev => ({ ...prev, investorName: e.target.value }))}
+                        placeholder="e.g., Venture Capital Fund"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="round">Round</Label>
+                      <Input
+                        id="round"
+                        value={newInvestment.round}
+                        onChange={(e) => setNewInvestment(prev => ({ ...prev, round: e.target.value }))}
+                        placeholder="e.g., Series A"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="amount">Amount ($)</Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        value={newInvestment.amount}
+                        onChange={(e) => setNewInvestment(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="shareClassSelect">Share Class</Label>
+                      <Select
+                        value={newInvestment.shareClass}
+                        onValueChange={(value) => setNewInvestment(prev => ({ ...prev, shareClass: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select share class" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {capTableData.shareClasses.map((sc) => (
+                            <SelectItem key={sc.id} value={sc.name}>{sc.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="date">Date</Label>
+                      <Input
+                        id="date"
+                        type="date"
+                        value={newInvestment.date}
+                        onChange={(e) => setNewInvestment(prev => ({ ...prev, date: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button onClick={addInvestment} className="w-full">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Investment
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Key Valuation Metrics */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Key Valuation Metrics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600">
-                ${adjustedValuation.toLocaleString()}
-              </p>
-              <p className="text-sm text-blue-700">Recommended Valuation</p>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">
-                {selectedMultiple.multiple}x
-              </p>
-              <p className="text-sm text-green-700">Revenue Multiple</p>
-            </div>
-            <div className="text-center p-4 bg-yellow-50 rounded-lg">
-              <p className={`text-2xl font-bold ${riskLevel === 'Low' ? 'text-green-600' : riskLevel === 'High' ? 'text-red-600' : 'text-yellow-600'}`}>
-                {riskLevel}
-              </p>
-              <p className="text-sm text-gray-700">Risk Level</p>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <p className="text-2xl font-bold text-purple-600">
-                {year3Revenue > 0 ? ((year3NetIncome / year3Revenue) * 100).toFixed(1) : 0}%
-              </p>
-              <p className="text-sm text-purple-700">Net Margin (Y3)</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="ownership" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ownership Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={ownershipData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="shares"
+                        label={({ name, percentage }) => `${name}: ${percentage.toFixed(1)}%`}
+                      >
+                        {ownershipData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: any, name) => [value.toLocaleString(), name]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Funding Analysis */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Funding Requirements Analysis</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-4 bg-slate-50 rounded-lg">
-              <p className="text-xl font-bold text-slate-700">
-                ${data.funding.totalFunding.toLocaleString()}
-              </p>
-              <p className="text-sm text-slate-600">Current Funding</p>
-            </div>
-            <div className="text-center p-4 bg-red-50 rounded-lg">
-              <p className="text-xl font-bold text-red-600">
-                ${additionalFundingNeeded.toLocaleString()}
-              </p>
-              <p className="text-sm text-red-700">Additional Funding Needed</p>
-            </div>
-            <div className="text-center p-4 bg-indigo-50 rounded-lg">
-              <p className="text-xl font-bold text-indigo-600">
-                {data.funding.totalFunding > 0 && data.funding.burnRate > 0 
-                  ? Math.floor(data.funding.totalFunding / (data.funding.burnRate * 12))
-                  : 'N/A'
-                }
-              </p>
-              <p className="text-sm text-indigo-700">Runway (Years)</p>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Ownership Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Share Class</TableHead>
+                      <TableHead>Shares</TableHead>
+                      <TableHead>Percentage</TableHead>
+                      <TableHead>Value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ownershipData.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>{item.shares.toLocaleString()}</TableCell>
+                        <TableCell>{item.percentage.toFixed(2)}%</TableCell>
+                        <TableCell>${item.value.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="font-semibold bg-muted/50">
+                      <TableCell>Total</TableCell>
+                      <TableCell>{totalShares.toLocaleString()}</TableCell>
+                      <TableCell>100.00%</TableCell>
+                      <TableCell>${ownershipData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </div>
-          
-          <div className="mt-6">
-            <h4 className="font-semibold mb-3">Valuation Summary</h4>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-700 mb-2">
-                Based on your {selectedMultiple.name.toLowerCase()} business model and {selectedMultiple.multiple}x revenue multiple:
-              </p>
-              <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
-                <li>Year 3 projected revenue: ${year3Revenue.toLocaleString()}</li>
-                <li>Risk adjustment factor: {(riskAdjustment * 100).toFixed(0)}% (Risk level: {riskLevel})</li>
-                <li>Recommended valuation range: ${(adjustedValuation * 0.8).toLocaleString()} - ${(adjustedValuation * 1.2).toLocaleString()}</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        <TabsContent value="dilution" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Percent className="w-5 h-5" />
+                Dilution Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {dilutionScenarios.map((scenario, index) => {
+                  const dilutionData = calculateDilution(scenario.newShares);
+                  return (
+                    <div key={index} className="border rounded-lg p-4">
+                      <h4 className="font-medium mb-3">{scenario.scenario}</h4>
+                      <div className="text-sm text-muted-foreground mb-3">
+                        New shares: {scenario.newShares.toLocaleString()} at ${scenario.pricePerShare}/share
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Share Class</TableHead>
+                            <TableHead>Current %</TableHead>
+                            <TableHead>New %</TableHead>
+                            <TableHead>Dilution</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {dilutionData.map((item, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell>{item.percentage.toFixed(2)}%</TableCell>
+                              <TableCell>{item.newPercentage.toFixed(2)}%</TableCell>
+                              <TableCell className="text-red-600">-{item.dilution.toFixed(2)}%</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="valuation" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Company Valuation Model</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="valuation">Current Company Valuation ($)</Label>
+                    <Input
+                      id="valuation"
+                      type="number"
+                      value={capTableData.companyValuation}
+                      onChange={(e) => setCapTableData(prev => ({
+                        ...prev,
+                        companyValuation: Number(e.target.value)
+                      }))}
+                    />
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <p>Price per share: ${(capTableData.companyValuation / totalShares).toFixed(4)}</p>
+                    <p>Total shares outstanding: {totalShares.toLocaleString()}</p>
+                    <p>Market cap: ${capTableData.companyValuation.toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <h4 className="font-medium">Valuation Metrics</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Fully Diluted Shares:</span>
+                      <span>{totalShares.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Pre-money Valuation:</span>
+                      <span>${capTableData.companyValuation.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Book Value per Share:</span>
+                      <span>${(capTableData.companyValuation / totalShares).toFixed(4)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -1,12 +1,14 @@
 import IncomeStatement from "@/components/IncomeStatement";
 import Analysis from "@/components/Analysis";
+import ValuationModel from "@/components/ValuationModel";
+import FundUtilization from "@/components/FundUtilization";
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import BalanceSheet from "@/components/BalanceSheet";
 import IndustrySelector from "@/components/IndustrySelector";
-import { BarChart3, FileText, TrendingUp } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Users, DollarSign } from "lucide-react";
 
 export interface FinancialData {
   revenueStreams: {
@@ -641,7 +643,7 @@ const Index = () => {
               </div>
             </div>
             
-            <TabsList className="grid w-full grid-cols-3 bg-white shadow-sm">
+            <TabsList className="grid w-full grid-cols-5 bg-white shadow-sm">
               <TabsTrigger value="income-statement" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Income Statement
@@ -649,6 +651,14 @@ const Index = () => {
               <TabsTrigger value="balance-sheet" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
                 Balance Sheet
+              </TabsTrigger>
+              <TabsTrigger value="cap-table" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Cap Table
+              </TabsTrigger>
+              <TabsTrigger value="fund-utilization" className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Fund Utilization
               </TabsTrigger>
               <TabsTrigger value="analysis" className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
@@ -683,6 +693,40 @@ const Index = () => {
                     })}
                     revenueStreams={financialData.revenueStreams}
                   />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="cap-table">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Capitalization Table & Valuation
+                  </CardTitle>
+                  <CardDescription>
+                    Share ownership, investments, dilution analysis, and company valuation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ValuationModel />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="fund-utilization">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5" />
+                    Fund Utilization & Runway Analysis
+                  </CardTitle>
+                  <CardDescription>
+                    Fund allocation planning, runway scenarios, and milestone tracking
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FundUtilization />
                 </CardContent>
               </Card>
             </TabsContent>
