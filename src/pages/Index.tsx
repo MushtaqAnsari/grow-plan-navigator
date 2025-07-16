@@ -9,6 +9,7 @@ import EmployeePlanning from "@/components/EmployeePlanning";
 import FinancialStatements from "@/components/FinancialStatements";
 import ValuationModel from "@/components/ValuationModel";
 import FundUtilization from "@/components/FundUtilization";
+import IndustrySelector from "@/components/IndustrySelector";
 import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target } from "lucide-react";
 
 export interface FinancialData {
@@ -44,6 +45,7 @@ export interface FinancialData {
 }
 
 const Index = () => {
+  const [industry, setIndustry] = useState<string>("");
   const [financialData, setFinancialData] = useState<FinancialData>({
     revenueStreams: [],
     costs: {
@@ -61,7 +63,7 @@ const Index = () => {
     }
   });
 
-  const [activeTab, setActiveTab] = useState("revenue");
+  const [activeTab, setActiveTab] = useState("industry");
 
   const updateFinancialData = (section: keyof FinancialData, data: any) => {
     setFinancialData(prev => ({
@@ -83,51 +85,72 @@ const Index = () => {
           </p>
         </div>
 
-        {/* Main Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-white shadow-sm">
-            <TabsTrigger value="revenue" className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Revenue
-            </TabsTrigger>
-            <TabsTrigger value="costs" className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4" />
-              Costs
-            </TabsTrigger>
-            <TabsTrigger value="employees" className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Team
-            </TabsTrigger>
-            <TabsTrigger value="statements" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Statements
-            </TabsTrigger>
-            <TabsTrigger value="valuation" className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Valuation
-            </TabsTrigger>
-            <TabsTrigger value="funding" className="flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              Funding
-            </TabsTrigger>
-          </TabsList>
+        {/* Industry Selection or Main Content */}
+        {!industry ? (
+          <IndustrySelector onIndustrySelect={(selectedIndustry) => {
+            setIndustry(selectedIndustry);
+            setActiveTab("revenue");
+          }} />
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600">Industry:</span>
+                <span className="font-medium text-slate-800 capitalize">{industry}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIndustry("")}
+                >
+                  Change Industry
+                </Button>
+              </div>
+            </div>
+            
+            <TabsList className="grid w-full grid-cols-6 bg-white shadow-sm">
+              <TabsTrigger value="revenue" className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Revenue
+              </TabsTrigger>
+              <TabsTrigger value="costs" className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Costs
+              </TabsTrigger>
+              <TabsTrigger value="employees" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Team
+              </TabsTrigger>
+              <TabsTrigger value="statements" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Statements
+              </TabsTrigger>
+              <TabsTrigger value="valuation" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Valuation
+              </TabsTrigger>
+              <TabsTrigger value="funding" className="flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                Funding
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="revenue">
-            <Card>
-              <CardHeader>
-                <CardTitle>Revenue Streams</CardTitle>
-                <CardDescription>
-                  Define your various revenue sources and growth projections
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RevenueStreams 
-                  data={financialData.revenueStreams}
-                  onChange={(data) => updateFinancialData('revenueStreams', data)}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="revenue">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue Streams</CardTitle>
+                  <CardDescription>
+                    Define your various revenue sources and growth projections for {industry}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <RevenueStreams 
+                    data={financialData.revenueStreams}
+                    onChange={(data) => updateFinancialData('revenueStreams', data)}
+                    industry={industry}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
           <TabsContent value="costs">
             <Card>
@@ -187,7 +210,8 @@ const Index = () => {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        )}
       </div>
     </div>
   );
