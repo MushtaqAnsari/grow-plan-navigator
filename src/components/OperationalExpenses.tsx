@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { FinancialData } from "@/pages/Index";
-import { Plus, Trash2, BarChart3 } from "lucide-react";
+import { Plus, Trash2, BarChart3, Users } from "lucide-react";
 
 interface OperationalExpensesProps {
   data: {
@@ -69,41 +69,148 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     });
   };
 
-  // Department report calculations
-  const getDepartmentReport = () => {
-    const departments: { [key: string]: { count: number; totalSalary: number; avgSalary: number; employees: any[] } } = {};
+  // Consultant management functions
+  const addConsultant = () => {
+    const newConsultant = {
+      id: Date.now().toString(),
+      name: '',
+      designation: '',
+      department: 'other' as const,
+      monthlyCost: 0
+    };
     
-    data.team.employees.forEach(emp => {
-      if (!departments[emp.department]) {
-        departments[emp.department] = { count: 0, totalSalary: 0, avgSalary: 0, employees: [] };
-      }
-      departments[emp.department].count++;
-      departments[emp.department].totalSalary += emp.salary;
-      departments[emp.department].employees.push(emp);
-    });
-
-    Object.keys(departments).forEach(dept => {
-      departments[dept].avgSalary = departments[dept].totalSalary / departments[dept].count;
-    });
-
-    return departments;
-  };
-
-  const updateTeamCost = (
-    category: keyof Omit<FinancialData['costs']['team'], 'employees'>, 
-    year: 'year1' | 'year2' | 'year3', 
-    value: number
-  ) => {
     onChange({
       ...data,
       team: {
         ...data.team,
-        [category]: {
-          ...data.team[category],
-          [year]: value
+        consultants: [...data.team.consultants, newConsultant]
+      }
+    });
+  };
+
+  const updateConsultant = (id: string, field: string, value: any) => {
+    onChange({
+      ...data,
+      team: {
+        ...data.team,
+        consultants: data.team.consultants.map(consultant => 
+          consultant.id === id ? { ...consultant, [field]: value } : consultant
+        )
+      }
+    });
+  };
+
+  const removeConsultant = (id: string) => {
+    onChange({
+      ...data,
+      team: {
+        ...data.team,
+        consultants: data.team.consultants.filter(consultant => consultant.id !== id)
+      }
+    });
+  };
+
+  // Update team line items
+  const updateTeamLineItem = (item: 'healthCare' | 'benefits' | 'iqama', field: 'amount' | 'percentage', value: number) => {
+    onChange({
+      ...data,
+      team: {
+        ...data.team,
+        [item]: {
+          ...data.team[item],
+          [field]: value
         }
       }
     });
+  };
+
+  // Calculate costs per employee
+  const getTotalEmployees = () => data.team.employees.length;
+
+  const getLineItemCostPerYear = (item: 'healthCare' | 'benefits' | 'iqama', year: 'year1' | 'year2' | 'year3') => {
+    const totalEmployees = getTotalEmployees();
+    const itemData = data.team[item];
+    const annualCostPerEmployee = (itemData.amount * 12) + (itemData.percentage / 100) * data.team.employees.reduce((sum, emp) => sum + emp.salary, 0) / totalEmployees;
+    return totalEmployees * annualCostPerEmployee;
+  };
+
+  // Department report calculations with distributed costs
+  const getDepartmentReport = () => {
+    const departments: { [key: string]: { 
+      employeeCount: number; 
+      consultantCount: number;
+      totalSalary: number; 
+      totalConsultantCost: number;
+      totalHealthCare: number;
+      totalBenefits: number;
+      totalIqama: number;
+      totalCost: number;
+      employees: any[];
+      consultants: any[];
+    } } = {};
+    
+    // Initialize departments
+    data.team.employees.forEach(emp => {
+      if (!departments[emp.department]) {
+        departments[emp.department] = { 
+          employeeCount: 0, 
+          consultantCount: 0,
+          totalSalary: 0, 
+          totalConsultantCost: 0,
+          totalHealthCare: 0,
+          totalBenefits: 0,
+          totalIqama: 0,
+          totalCost: 0,
+          employees: [],
+          consultants: []
+        };
+      }
+      departments[emp.department].employeeCount++;
+      departments[emp.department].totalSalary += emp.salary;
+      departments[emp.department].employees.push(emp);
+    });
+
+    // Add consultants
+    data.team.consultants.forEach(consultant => {
+      if (!departments[consultant.department]) {
+        departments[consultant.department] = { 
+          employeeCount: 0, 
+          consultantCount: 0,
+          totalSalary: 0, 
+          totalConsultantCost: 0,
+          totalHealthCare: 0,
+          totalBenefits: 0,
+          totalIqama: 0,
+          totalCost: 0,
+          employees: [],
+          consultants: []
+        };
+      }
+      departments[consultant.department].consultantCount++;
+      departments[consultant.department].totalConsultantCost += consultant.monthlyCost * 12;
+      departments[consultant.department].consultants.push(consultant);
+    });
+
+    // Distribute line item costs by employee count in each department
+    const totalEmployees = getTotalEmployees();
+    if (totalEmployees > 0) {
+      Object.keys(departments).forEach(dept => {
+        const deptEmployeeCount = departments[dept].employeeCount;
+        const ratio = deptEmployeeCount / totalEmployees;
+        
+        departments[dept].totalHealthCare = getLineItemCostPerYear('healthCare', 'year1') * ratio;
+        departments[dept].totalBenefits = getLineItemCostPerYear('benefits', 'year1') * ratio;
+        departments[dept].totalIqama = getLineItemCostPerYear('iqama', 'year1') * ratio;
+        
+        departments[dept].totalCost = departments[dept].totalSalary + 
+                                    departments[dept].totalConsultantCost +
+                                    departments[dept].totalHealthCare +
+                                    departments[dept].totalBenefits +
+                                    departments[dept].totalIqama;
+      });
+    }
+
+    return departments;
   };
 
   const updateAdminCost = (
@@ -170,13 +277,6 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     }
     return data.marketing.manualBudget[year];
   };
-
-  const teamCategories = [
-    { key: 'benefits' as keyof Omit<FinancialData['costs']['team'], 'employees'>, label: 'Benefits & Healthcare', color: 'border-green-500' },
-    { key: 'contractors' as keyof Omit<FinancialData['costs']['team'], 'employees'>, label: 'Contractors & Freelancers', color: 'border-purple-500' },
-    { key: 'training' as keyof Omit<FinancialData['costs']['team'], 'employees'>, label: 'Training & Development', color: 'border-orange-500' },
-    { key: 'recruitment' as keyof Omit<FinancialData['costs']['team'], 'employees'>, label: 'Recruitment Costs', color: 'border-red-500' }
-  ];
 
   const adminCategories = [
     { key: 'rent' as keyof FinancialData['costs']['admin'], label: 'Office Rent (Monthly)', color: 'border-blue-500' },
@@ -309,26 +409,262 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
             </CardContent>
           </Card>
 
+          {/* Consultants Section */}
+          <Card className="border-l-4 border-l-purple-500">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Consultants</CardTitle>
+              <Button onClick={addConsultant} size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Consultant
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {data.team.consultants.map((consultant) => (
+                <div key={consultant.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border rounded-lg">
+                  <div>
+                    <Label className="text-xs text-gray-500">Name</Label>
+                    <Input
+                      placeholder="Consultant Name"
+                      value={consultant.name}
+                      onChange={(e) => updateConsultant(consultant.id, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Designation</Label>
+                    <Input
+                      placeholder="Role/Specialty"
+                      value={consultant.designation}
+                      onChange={(e) => updateConsultant(consultant.id, 'designation', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Department</Label>
+                    <Select value={consultant.department} onValueChange={(value) => updateConsultant(consultant.id, 'department', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departmentOptions.map(dept => (
+                          <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Monthly Cost ($)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={consultant.monthlyCost || ''}
+                      onChange={(e) => updateConsultant(consultant.id, 'monthlyCost', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <Button
+                      onClick={() => removeConsultant(consultant.id)}
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              
+              {data.team.consultants.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No consultants added yet. Click "Add Consultant" to start.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Employee Benefits Line Items */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Health Care */}
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader>
+                <CardTitle className="text-lg">Health Care</CardTitle>
+                <p className="text-sm text-gray-500">Cost per employee: ${getTotalEmployees() > 0 ? Math.round(getLineItemCostPerYear('healthCare', 'year1') / getTotalEmployees()) : 0}/year</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Fixed Amount (Monthly per employee)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.team.healthCare.amount || ''}
+                    onChange={(e) => updateTeamLineItem('healthCare', 'amount', Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>Percentage of Salary (%)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.team.healthCare.percentage || ''}
+                    onChange={(e) => updateTeamLineItem('healthCare', 'percentage', Number(e.target.value))}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Benefits */}
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader>
+                <CardTitle className="text-lg">Benefits</CardTitle>
+                <p className="text-sm text-gray-500">Cost per employee: ${getTotalEmployees() > 0 ? Math.round(getLineItemCostPerYear('benefits', 'year1') / getTotalEmployees()) : 0}/year</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Fixed Amount (Monthly per employee)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.team.benefits.amount || ''}
+                    onChange={(e) => updateTeamLineItem('benefits', 'amount', Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>Percentage of Salary (%)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.team.benefits.percentage || ''}
+                    onChange={(e) => updateTeamLineItem('benefits', 'percentage', Number(e.target.value))}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Iqama */}
+            <Card className="border-l-4 border-l-orange-500">
+              <CardHeader>
+                <CardTitle className="text-lg">Iqama</CardTitle>
+                <p className="text-sm text-gray-500">Cost per employee: ${getTotalEmployees() > 0 ? Math.round(getLineItemCostPerYear('iqama', 'year1') / getTotalEmployees()) : 0}/year</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Fixed Amount (Monthly per employee)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.team.iqama.amount || ''}
+                    onChange={(e) => updateTeamLineItem('iqama', 'amount', Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>Percentage of Salary (%)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.team.iqama.percentage || ''}
+                    onChange={(e) => updateTeamLineItem('iqama', 'percentage', Number(e.target.value))}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recruitment Costs */}
+          <Card className="border-l-4 border-l-red-500">
+            <CardHeader>
+              <CardTitle className="text-lg">Recruitment Costs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Year 1 ($)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.team.recruitment.year1 || ''}
+                    onChange={(e) => onChange({
+                      ...data,
+                      team: {
+                        ...data.team,
+                        recruitment: {
+                          ...data.team.recruitment,
+                          year1: Number(e.target.value)
+                        }
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>Year 2 ($)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.team.recruitment.year2 || ''}
+                    onChange={(e) => onChange({
+                      ...data,
+                      team: {
+                        ...data.team,
+                        recruitment: {
+                          ...data.team.recruitment,
+                          year2: Number(e.target.value)
+                        }
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>Year 3 ($)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.team.recruitment.year3 || ''}
+                    onChange={(e) => onChange({
+                      ...data,
+                      team: {
+                        ...data.team,
+                        recruitment: {
+                          ...data.team.recruitment,
+                          year3: Number(e.target.value)
+                        }
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Department Report */}
           {showDepartmentReport && (
             <Card className="border-l-4 border-l-green-500">
               <CardHeader>
-                <CardTitle className="text-lg">Department Payroll Report</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Department Cost Report
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {Object.entries(getDepartmentReport()).map(([dept, data]) => (
-                    <div key={dept} className="p-4 border rounded-lg">
+                    <div key={dept} className="p-4 border rounded-lg space-y-3">
                       <h4 className="font-medium capitalize text-sm text-gray-700">{dept}</h4>
-                      <div className="mt-2 space-y-1 text-xs">
-                        <p>Employees: {data.count}</p>
-                        <p>Total Salary: ${data.totalSalary.toLocaleString()}</p>
-                        <p>Avg Salary: ${Math.round(data.avgSalary).toLocaleString()}</p>
+                      <div className="space-y-1 text-xs">
+                        <p>Employees: {data.employeeCount}</p>
+                        <p>Consultants: {data.consultantCount}</p>
+                        <p>Salaries: ${data.totalSalary.toLocaleString()}</p>
+                        <p>Consultant Costs: ${data.totalConsultantCost.toLocaleString()}</p>
+                        <p>Health Care: ${Math.round(data.totalHealthCare).toLocaleString()}</p>
+                        <p>Benefits: ${Math.round(data.totalBenefits).toLocaleString()}</p>
+                        <p>Iqama: ${Math.round(data.totalIqama).toLocaleString()}</p>
+                        <p className="font-semibold border-t pt-1">Total: ${Math.round(data.totalCost).toLocaleString()}</p>
                       </div>
-                      <div className="mt-2">
+                      <div className="space-y-1">
                         {data.employees.map(emp => (
                           <Badge key={emp.id} variant="outline" className="mr-1 mb-1 text-xs">
                             {emp.name || 'Unnamed'} {emp.isCapitalized && '(IP)'}
+                          </Badge>
+                        ))}
+                        {data.consultants.map(consultant => (
+                          <Badge key={consultant.id} variant="secondary" className="mr-1 mb-1 text-xs">
+                            {consultant.name || 'Consultant'}
                           </Badge>
                         ))}
                       </div>
@@ -338,46 +674,6 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
               </CardContent>
             </Card>
           )}
-
-          {/* Other Team Costs */}
-          {teamCategories.map(({ key, label, color }) => (
-            <Card key={key} className={`border-l-4 ${color}`}>
-              <CardHeader>
-                <CardTitle className="text-lg">{label}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Year 1 ($)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={data.team[key].year1 || ''}
-                      onChange={(e) => updateTeamCost(key, 'year1', Number(e.target.value))}
-                    />
-                  </div>
-                  <div>
-                    <Label>Year 2 ($)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={data.team[key].year2 || ''}
-                      onChange={(e) => updateTeamCost(key, 'year2', Number(e.target.value))}
-                    />
-                  </div>
-                  <div>
-                    <Label>Year 3 ($)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={data.team[key].year3 || ''}
-                      onChange={(e) => updateTeamCost(key, 'year3', Number(e.target.value))}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </TabsContent>
 
         <TabsContent value="admin" className="space-y-6">
@@ -432,9 +728,7 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                   checked={data.marketing.isPercentageOfRevenue}
                   onCheckedChange={updateMarketingMode}
                 />
-                <Label>
-                  {data.marketing.isPercentageOfRevenue ? 'Percentage of Revenue' : 'Manual Budget'}
-                </Label>
+                <Label>Use percentage of revenue</Label>
               </div>
               
               {data.marketing.isPercentageOfRevenue ? (
@@ -447,52 +741,44 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                     onChange={(e) => updateMarketingPercentage(Number(e.target.value))}
                   />
                   <div className="mt-2 text-sm text-gray-600">
-                    <p>Year 1: ${getMarketingBudget('year1').toLocaleString()}</p>
-                    <p>Year 2: ${getMarketingBudget('year2').toLocaleString()}</p>
-                    <p>Year 3: ${getMarketingBudget('year3').toLocaleString()}</p>
+                    <p>Budget Year 1: ${getMarketingBudget('year1').toLocaleString()}</p>
+                    <p>Budget Year 2: ${getMarketingBudget('year2').toLocaleString()}</p>
+                    <p>Budget Year 3: ${getMarketingBudget('year3').toLocaleString()}</p>
                   </div>
                 </div>
               ) : (
-                <div>
-                  <Label>Manual Marketing Budget</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                    <div>
-                      <Label className="text-xs text-gray-500">Year 1 ($)</Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={data.marketing.manualBudget.year1 || ''}
-                        onChange={(e) => updateMarketingCost('manualBudget', 'year1', Number(e.target.value))}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-500">Year 2 ($)</Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={data.marketing.manualBudget.year2 || ''}
-                        onChange={(e) => updateMarketingCost('manualBudget', 'year2', Number(e.target.value))}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-500">Year 3 ($)</Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={data.marketing.manualBudget.year3 || ''}
-                        onChange={(e) => updateMarketingCost('manualBudget', 'year3', Number(e.target.value))}
-                      />
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Year 1 Budget ($)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={data.marketing.manualBudget.year1 || ''}
+                      onChange={(e) => updateMarketingCost('manualBudget', 'year1', Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Year 2 Budget ($)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={data.marketing.manualBudget.year2 || ''}
+                      onChange={(e) => updateMarketingCost('manualBudget', 'year2', Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Year 3 Budget ($)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={data.marketing.manualBudget.year3 || ''}
+                      onChange={(e) => updateMarketingCost('manualBudget', 'year3', Number(e.target.value))}
+                    />
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
-
-          <div className="text-sm text-gray-600 mb-4">
-            <p className="font-medium">Marketing Budget Breakdown:</p>
-            <p>Allocate your marketing budget across different channels below. Total allocations should not exceed your budget.</p>
-          </div>
 
           {marketingCategories.map(({ key, label, color }) => (
             <Card key={key} className={`border-l-4 ${color}`}>

@@ -41,9 +41,16 @@ export interface FinancialData {
         salary: number;
         isCapitalized?: boolean;
       }[];
-      benefits: { year1: number; year2: number; year3: number; };
-      contractors: { year1: number; year2: number; year3: number; };
-      training: { year1: number; year2: number; year3: number; };
+      consultants: {
+        id: string;
+        name: string;
+        designation: string;
+        department: 'technology' | 'sales' | 'marketing' | 'operations' | 'hr' | 'finance' | 'other';
+        monthlyCost: number;
+      }[];
+      healthCare: { amount: number; percentage: number; };
+      benefits: { amount: number; percentage: number; };
+      iqama: { amount: number; percentage: number; };
       recruitment: { year1: number; year2: number; year3: number; };
     };
     admin: {
@@ -98,9 +105,10 @@ const Index = () => {
       revenueStreamCosts: {},
       team: {
         employees: [],
-        benefits: { year1: 0, year2: 0, year3: 0 },
-        contractors: { year1: 0, year2: 0, year3: 0 },
-        training: { year1: 0, year2: 0, year3: 0 },
+        consultants: [],
+        healthCare: { amount: 0, percentage: 0 },
+        benefits: { amount: 0, percentage: 0 },
+        iqama: { amount: 0, percentage: 0 },
         recruitment: { year1: 0, year2: 0, year3: 0 }
       },
       admin: {
