@@ -3,6 +3,7 @@ import Analysis from "@/components/Analysis";
 import ValuationModel from "@/components/ValuationModel";
 import FundUtilization from "@/components/FundUtilization";
 import Valuation from "@/components/Valuation";
+import Report from "@/components/Report";
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -644,7 +645,7 @@ const Index = () => {
               </div>
             </div>
             
-            <TabsList className="grid w-full grid-cols-6 bg-white shadow-sm">
+            <TabsList className="grid w-full grid-cols-7 bg-white shadow-sm">
               <TabsTrigger value="income-statement" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Income Statement
@@ -668,6 +669,10 @@ const Index = () => {
               <TabsTrigger value="analysis" className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
                 Analysis & Ratios
+              </TabsTrigger>
+              <TabsTrigger value="report" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Report
               </TabsTrigger>
             </TabsList>
 
@@ -768,6 +773,10 @@ const Index = () => {
                   <Analysis data={financialData} />
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="report">
+              <Report data={financialData} />
             </TabsContent>
           </Tabs>
         )}
