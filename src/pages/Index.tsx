@@ -377,7 +377,12 @@ const Index = () => {
             <TabsContent value="income-statement">
               <IncomeStatement 
                 data={financialData}
-                onUpdateData={updateFinancialData}
+                onUpdateData={(newData) => {
+                  // Update the entire financial data object
+                  Object.keys(newData).forEach(key => {
+                    updateFinancialData(key as keyof FinancialData, newData[key as keyof FinancialData]);
+                  });
+                }}
               />
             </TabsContent>
 
