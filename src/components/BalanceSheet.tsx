@@ -337,72 +337,83 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
           <h3 className="text-lg font-semibold text-slate-700">Accounts Receivable</h3>
           
           {revenueStreams.length > 0 ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-gray-500 mb-1 block">Select Revenue Stream</Label>
-                  <Select value={selectedRevenueStream} onValueChange={setSelectedRevenueStream}>
-                    <SelectTrigger className="h-8 bg-white border border-gray-300 rounded-md shadow-sm z-50">
-                      <SelectValue placeholder="Select revenue stream" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
-                      {revenueStreams.map((stream) => (
-                        <SelectItem key={stream.name} value={stream.name}>
+            <div className="space-y-6">
+              {/* Revenue Streams AR Configuration */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-slate-600">Revenue Streams AR Configuration</h4>
+                {revenueStreams.map((stream, index) => (
+                  <Card key={stream.name} className="border-l-4 border-green-500">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Badge variant="outline" className="text-xs">
+                          #{index + 1}
+                        </Badge>
+                        <Badge variant="default" className="text-xs">
                           {stream.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {selectedRevenueStream && (
-                  <div>
-                    <Label className="text-xs text-gray-500 mb-1 block">AR Days for {selectedRevenueStream}</Label>
-                    <Input
-                      type="number"
-                      placeholder="30"
-                      value={data.accountsReceivable.revenueStreamARs[selectedRevenueStream]?.arDays || ''}
-                      onChange={(e) => updateARDays(selectedRevenueStream, Number(e.target.value), revenueStreams)}
-                      className="h-8"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Collection period in days</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Revenue Stream AR Details */}
-              {selectedRevenueStream && data.accountsReceivable.revenueStreamARs[selectedRevenueStream] && (
-                <Card className="border-l-4 border-green-500">
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">AR Details for {selectedRevenueStream}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
-                      {(['year1', 'year2', 'year3'] as const).map((year) => (
-                        <div key={year}>
-                          <Label className="text-xs text-gray-500 mb-1 block">
-                            {year === 'year1' ? 'Year 1 ($)' : year === 'year2' ? 'Year 2 ($)' : 'Year 3 ($)'}
-                          </Label>
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-4 items-end">
+                        <div>
+                          <Label className="text-xs text-gray-500 mb-1 block">AR Days</Label>
                           <Input
                             type="number"
-                            placeholder="Auto-calculated"
-                            value={data.accountsReceivable.revenueStreamARs[selectedRevenueStream]?.[year]?.toLocaleString() || '0'}
+                            placeholder="30"
+                            value={data.accountsReceivable.revenueStreamARs[stream.name]?.arDays || ''}
+                            onChange={(e) => updateARDays(stream.name, Number(e.target.value), revenueStreams)}
+                            className="h-8"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Collection period in days</p>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-xs text-gray-500 mb-1 block">Year 1 AR ($)</Label>
+                          <Input
+                            type="number"
+                            value={data.accountsReceivable.revenueStreamARs[stream.name]?.year1?.toLocaleString() || '0'}
                             readOnly
                             className="h-8 bg-gray-50"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Based on {data.accountsReceivable.revenueStreamARs[selectedRevenueStream]?.arDays || 0} days
+                          <p className="text-xs text-green-600 mt-1">
+                            Revenue: ${stream.year1?.toLocaleString() || '0'}
                           </p>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                        
+                        <div>
+                          <Label className="text-xs text-gray-500 mb-1 block">Year 2 AR ($)</Label>
+                          <Input
+                            type="number"
+                            value={data.accountsReceivable.revenueStreamARs[stream.name]?.year2?.toLocaleString() || '0'}
+                            readOnly
+                            className="h-8 bg-gray-50"
+                          />
+                          <p className="text-xs text-green-600 mt-1">
+                            Revenue: ${stream.year2?.toLocaleString() || '0'}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-xs text-gray-500 mb-1 block">Year 3 AR ($)</Label>
+                          <Input
+                            type="number"
+                            value={data.accountsReceivable.revenueStreamARs[stream.name]?.year3?.toLocaleString() || '0'}
+                            readOnly
+                            className="h-8 bg-gray-50"
+                          />
+                          <p className="text-xs text-green-600 mt-1">
+                            Revenue: ${stream.year3?.toLocaleString() || '0'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
               {/* Total AR Summary */}
               <Card className="bg-green-50">
                 <CardHeader>
-                  <CardTitle className="text-sm font-medium">Total Accounts Receivable</CardTitle>
+                  <CardTitle className="text-sm font-medium">Total Accounts Receivable Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-4">
@@ -414,6 +425,9 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                         <div className="text-lg font-semibold text-green-700">
                           ${data.accountsReceivable[`total${year.charAt(0).toUpperCase() + year.slice(1)}` as keyof typeof data.accountsReceivable].toLocaleString()}
                         </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Combined from {revenueStreams.length} revenue stream{revenueStreams.length !== 1 ? 's' : ''}
+                        </p>
                       </div>
                     ))}
                   </div>
