@@ -161,15 +161,84 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
             </Button>
           </div>
 
+          {/* Assets Analysis Summary */}
+          {data.fixedAssets.assets.length > 0 && (
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500">
+                <CardContent className="pt-4">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-blue-700">Asset Categories</h4>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Tangible Assets:</span>
+                        <Badge variant="secondary">
+                          {data.fixedAssets.assets.filter(a => a.assetClass === 'tangible').length}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Intangible Assets:</span>
+                        <Badge variant="secondary">
+                          {data.fixedAssets.assets.filter(a => a.assetClass === 'intangible').length}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between font-medium pt-1 border-t">
+                        <span>Total Assets:</span>
+                        <Badge variant="default">
+                          {data.fixedAssets.assets.length}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500">
+                <CardContent className="pt-4">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-green-700">Total Investment</h4>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Total Cost:</span>
+                        <span className="font-medium">
+                          ${data.fixedAssets.assets.reduce((sum, asset) => sum + (asset.cost || 0), 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Annual Depreciation:</span>
+                        <span className="font-medium">
+                          ${data.fixedAssets.assets.reduce((sum, asset) => sum + ((asset.cost || 0) / (asset.usefulLife || 1)), 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           <div className="space-y-4">
-            {data.fixedAssets.assets.map((asset) => (
-              <Card key={asset.id} className="border-l-4 border-blue-500">
+            {data.fixedAssets.assets
+              .filter(asset => asset.name || asset.cost > 0) // Only show assets with name or cost
+              .map((asset, index) => (
+              <Card key={asset.id} className={`border-l-4 ${asset.assetClass === 'tangible' ? 'border-blue-500' : 'border-purple-500'}`}>
                 <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Badge variant="outline" className="text-xs">
+                      #{index + 1}
+                    </Badge>
+                    <Badge variant={asset.assetClass === 'tangible' ? 'default' : 'secondary'} className="text-xs">
+                      {asset.assetClass === 'tangible' ? 'Tangible' : 'Intangible'}
+                    </Badge>
+                    {asset.isFromCapitalizedPayroll && (
+                      <Badge variant="secondary" className="text-xs">IP</Badge>
+                    )}
+                  </div>
+                  
                   <div className="grid grid-cols-6 gap-4 items-end">
                     <div>
                       <Label className="text-xs text-gray-500 mb-1 block">Asset Name</Label>
                       <Input
-                        placeholder="Asset name"
+                        placeholder="Enter asset name"
                         value={asset.name}
                         onChange={(e) => updateAsset(asset.id, 'name', e.target.value)}
                         className="h-8"
@@ -207,19 +276,17 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {asset.isFromCapitalizedPayroll && (
-                        <Badge variant="secondary" className="text-xs">IP</Badge>
-                      )}
-                      <span className="text-xs text-gray-500">
-                        Annual Depreciation: ${(asset.cost / asset.usefulLife).toLocaleString()}
-                      </span>
+                    <div className="text-xs text-gray-500">
+                      <div>Annual Depreciation:</div>
+                      <div className="font-medium text-gray-700">
+                        ${((asset.cost || 0) / (asset.usefulLife || 1)).toLocaleString()}
+                      </div>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => removeAsset(asset.id)}
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -227,6 +294,18 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                 </CardContent>
               </Card>
             ))}
+            
+            {data.fixedAssets.assets.filter(asset => asset.name || asset.cost > 0).length === 0 && (
+              <Card className="border-dashed border-2 border-gray-300">
+                <CardContent className="pt-6 text-center">
+                  <div className="text-gray-500 mb-2">
+                    <Building className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No assets added yet</p>
+                    <p className="text-sm">Click "Add Asset" to start building your asset portfolio</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Fixed Assets Summary */}
