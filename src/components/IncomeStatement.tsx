@@ -14,15 +14,12 @@ import { TrendingUp, DollarSign, BarChart3, Users, FileText, Calculator, Receipt
 
 interface IncomeStatementProps {
   data: FinancialData;
-  onUpdateData: (data: FinancialData) => void;
+  onUpdateData: (section: keyof FinancialData, data: any) => void;
 }
 
 const IncomeStatement: React.FC<IncomeStatementProps> = ({ data, onUpdateData }) => {
   const updateFinancialData = (field: string, value: any) => {
-    onUpdateData({
-      ...data,
-      [field]: value
-    });
+    onUpdateData(field as keyof FinancialData, value);
   };
 
   return (
@@ -178,7 +175,14 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ data, onUpdateData })
             <CardContent>
               <Taxation 
                 data={data}
-                onUpdateData={onUpdateData}
+                onUpdateData={(newData) => {
+                  // Find what changed and update only that section
+                  Object.keys(newData).forEach(key => {
+                    if (JSON.stringify(newData[key as keyof FinancialData]) !== JSON.stringify(data[key as keyof FinancialData])) {
+                      onUpdateData(key as keyof FinancialData, newData[key as keyof FinancialData]);
+                    }
+                  });
+                }}
               />
             </CardContent>
           </Card>
