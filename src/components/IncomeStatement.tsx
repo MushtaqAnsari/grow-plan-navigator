@@ -176,12 +176,10 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ data, onUpdateData })
               <Taxation 
                 data={data}
                 onUpdateData={(newData) => {
-                  // Find what changed and update only that section
-                  Object.keys(newData).forEach(key => {
-                    if (JSON.stringify(newData[key as keyof FinancialData]) !== JSON.stringify(data[key as keyof FinancialData])) {
-                      onUpdateData(key as keyof FinancialData, newData[key as keyof FinancialData]);
-                    }
-                  });
+                  // Only update taxation section to prevent cascading updates
+                  if (newData.taxation && JSON.stringify(newData.taxation) !== JSON.stringify(data.taxation)) {
+                    updateFinancialData('taxation', newData.taxation);
+                  }
                 }}
               />
             </CardContent>
