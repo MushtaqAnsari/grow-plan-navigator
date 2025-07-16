@@ -13,6 +13,7 @@ import CompanySetup from "@/components/CompanySetup";
 import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFinancialData } from "@/hooks/useFinancialData";
+import { createCyberLabsDemoData, createCyberLabsCompanyData } from "@/utils/demoData";
 
 export interface FinancialData {
   revenueStreams: {
@@ -262,6 +263,15 @@ const Index = () => {
           <CompanySetup onSetupComplete={(data) => {
             setCompanyData(data);
             setIndustry(data.industry);
+            
+            // If it's CyberLabs demo, load demo financial data
+            if (data.companyName === "CyberLabs") {
+              const demoData = createCyberLabsDemoData();
+              Object.keys(demoData).forEach(key => {
+                updateFinancialData(key as keyof FinancialData, demoData[key as keyof FinancialData]);
+              });
+            }
+            
             setActiveTab("income-statement");
           }} />
         ) : (

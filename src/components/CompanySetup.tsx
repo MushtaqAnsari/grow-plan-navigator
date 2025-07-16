@@ -495,7 +495,7 @@ const CompanySetup: React.FC<CompanySetupProps> = ({ onSetupComplete }) => {
                 </div>
               )}
 
-              <div className="flex justify-center pt-8">
+              <div className="flex flex-col items-center gap-4 pt-8">
                 <Button 
                   onClick={handleSubmit} 
                   size="lg"
@@ -504,6 +504,25 @@ const CompanySetup: React.FC<CompanySetupProps> = ({ onSetupComplete }) => {
                   <Building2 className="w-5 h-5 mr-3" />
                   Create Financial Model
                 </Button>
+                
+                <div className="text-center">
+                  <p className="text-sm text-slate-500 mb-2">Or explore with demo data</p>
+                  <Button 
+                    variant="outline"
+                    onClick={() => onSetupComplete({
+                      companyName: "CyberLabs",
+                      industry: "edtech", 
+                      currency: "USD",
+                      language: "English",
+                      founderName: "David Park",
+                      businessStage: "Growth Stage",
+                      fundingStage: "series-a"
+                    })}
+                    className="text-primary border-primary hover:bg-primary/5"
+                  >
+                    Load CyberLabs Demo Data
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </div>

@@ -30,8 +30,8 @@ interface ValuationInputs {
 
 const Valuation: React.FC<ValuationProps> = ({ financialData }) => {
   const [inputs, setInputs] = useState<ValuationInputs>({
-    ebitdaMultiples: { low: 8, high: 15 },
-    revenueMultiples: { low: 3, high: 8 },
+    ebitdaMultiples: { low: 12, high: 18 }, // Adjusted for EdTech SaaS
+    revenueMultiples: { low: 5.5, high: 7.5 }, // Adjusted for $15M target on $2.4M revenue
     dcf: { discountRate: 12, terminalGrowthRate: 3, years: 5 }
   });
 
