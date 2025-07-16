@@ -1,21 +1,12 @@
-
+import IncomeStatement from "@/components/IncomeStatement";
+import Analysis from "@/components/Analysis";
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import RevenueStreams from "@/components/RevenueStreams";
-import DirectCosts from "@/components/DirectCosts";
-import GrossProfit from "@/components/GrossProfit";
-import OperationalExpenses from "@/components/OperationalExpenses";
-import EBITDA from "@/components/EBITDA";
-import LoansAndFinancing from "@/components/LoansAndFinancing";
-import Taxation from "@/components/Taxation";
-import NetProfit from "@/components/NetProfit";
-import Summary from "@/components/Summary";
-import FinancialStatements from "@/components/FinancialStatements";
 import BalanceSheet from "@/components/BalanceSheet";
 import IndustrySelector from "@/components/IndustrySelector";
-import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target, Calculator, Receipt, Award } from "lucide-react";
+import { BarChart3, FileText, TrendingUp } from "lucide-react";
 
 export interface FinancialData {
   revenueStreams: {
@@ -606,7 +597,7 @@ const Index = () => {
     }
   });
 
-  const [activeTab, setActiveTab] = useState("industry");
+  const [activeTab, setActiveTab] = useState("income-statement");
 
   const updateFinancialData = (section: keyof FinancialData, data: any) => {
     setFinancialData(prev => ({
@@ -632,7 +623,7 @@ const Index = () => {
         {!industry ? (
           <IndustrySelector onIndustrySelect={(selectedIndustry) => {
             setIndustry(selectedIndustry);
-            setActiveTab("revenue");
+            setActiveTab("income-statement");
           }} />
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -650,205 +641,35 @@ const Index = () => {
               </div>
             </div>
             
-            <TabsList className="grid w-full grid-cols-11 bg-white shadow-sm">
-              <TabsTrigger value="revenue" className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                Revenue
-              </TabsTrigger>
-              <TabsTrigger value="direct-costs" className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Direct Costs
-              </TabsTrigger>
-              <TabsTrigger value="gross-profit" className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Gross Profit
-              </TabsTrigger>
-              <TabsTrigger value="operational" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Operational
-              </TabsTrigger>
-              <TabsTrigger value="ebitda" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-3 bg-white shadow-sm">
+              <TabsTrigger value="income-statement" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
-                EBITDA
-              </TabsTrigger>
-              <TabsTrigger value="loans" className="flex items-center gap-2">
-                <Calculator className="w-4 h-4" />
-                Loans
-              </TabsTrigger>
-              <TabsTrigger value="taxation" className="flex items-center gap-2">
-                <Receipt className="w-4 h-4" />
-                Taxation
-              </TabsTrigger>
-              <TabsTrigger value="net-profit" className="flex items-center gap-2">
-                <Award className="w-4 h-4" />
-                Net Profit
+                Income Statement
               </TabsTrigger>
               <TabsTrigger value="balance-sheet" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
                 Balance Sheet
               </TabsTrigger>
-              <TabsTrigger value="financial-statements" className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Statements
-              </TabsTrigger>
-              <TabsTrigger value="summary" className="flex items-center gap-2">
-                <Target className="w-4 h-4" />
-                Summary
+              <TabsTrigger value="analysis" className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Analysis & Ratios
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="revenue">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Revenue Streams</CardTitle>
-                  <CardDescription>
-                    Define your various revenue sources and growth projections for {industry}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RevenueStreams 
-                    data={financialData.revenueStreams}
-                    onChange={(data) => updateFinancialData('revenueStreams', data)}
-                    industry={industry}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="direct-costs">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Direct Costs</CardTitle>
-                  <CardDescription>
-                    Define direct costs associated with each revenue stream
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <DirectCosts 
-                    data={financialData.costs.revenueStreamCosts}
-                    onChange={(data) => updateFinancialData('costs', {
-                      ...financialData.costs,
-                      revenueStreamCosts: data
-                    })}
-                    revenueStreams={financialData.revenueStreams}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="gross-profit">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Gross Profit Analysis</CardTitle>
-                  <CardDescription>
-                    Analyze gross profit margins and trends by revenue stream
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <GrossProfit data={financialData} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="operational">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Operational Expenses</CardTitle>
-                  <CardDescription>
-                    Plan team, administrative, and marketing expenses
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <OperationalExpenses 
-                    data={{
-                      team: financialData.costs.team,
-                      admin: financialData.costs.admin,
-                      marketing: financialData.costs.marketing
-                    }}
-                    onChange={(data) => updateFinancialData('costs', {
-                      ...financialData.costs,
-                      ...data
-                    })}
-                    revenueStreams={financialData.revenueStreams}
-                    balanceSheetData={financialData.costs.balanceSheet}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="ebitda">
-              <Card>
-                <CardHeader>
-                  <CardTitle>EBITDA Analysis</CardTitle>
-                  <CardDescription>
-                    Monitor earnings before interest, taxes, depreciation, and amortization
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <EBITDA data={financialData} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="loans">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Loans & Financing</CardTitle>
-                  <CardDescription>
-                    Manage loans, convertible notes, and calculate net profit after interest
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <LoansAndFinancing 
-                    data={financialData.loansAndFinancing}
-                    onChange={(loansData) => updateFinancialData('loansAndFinancing', loansData)}
-                    financialData={financialData}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="taxation">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Receipt className="w-5 h-5" />
-                    Taxation & Zakat
-                  </CardTitle>
-                  <CardDescription>
-                    Configure income tax and zakat calculations according to Saudi regulations
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Taxation 
-                    data={financialData}
-                    onUpdateData={setFinancialData}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="net-profit">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="w-5 h-5" />
-                    Net Profit Analysis
-                  </CardTitle>
-                  <CardDescription>
-                    Comprehensive net profit analysis with metrics, charts, and insights
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <NetProfit data={financialData} />
-                </CardContent>
-              </Card>
+            <TabsContent value="income-statement">
+              <IncomeStatement 
+                data={financialData}
+                onUpdateData={setFinancialData}
+              />
             </TabsContent>
 
             <TabsContent value="balance-sheet">
               <Card>
                 <CardHeader>
-                  <CardTitle>Balance Sheet</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    Balance Sheet
+                  </CardTitle>
                   <CardDescription>
                     Assets, liabilities, and equity projections
                   </CardDescription>
@@ -866,33 +687,19 @@ const Index = () => {
               </Card>
             </TabsContent>
 
-        <TabsContent value="financial-statements">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Financial Statements & Analysis
-              </CardTitle>
-              <CardDescription>
-                Comprehensive financial statements with analysis, ratios, and insights
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FinancialStatements data={financialData} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="summary">
+            <TabsContent value="analysis">
               <Card>
                 <CardHeader>
-                  <CardTitle>Financial Summary</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    Financial Analysis & Performance Ratios
+                  </CardTitle>
                   <CardDescription>
-                    Key metrics, ratios, and performance indicators
+                    Comprehensive business analysis with key financial ratios, performance metrics, and strategic insights
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Summary data={financialData} />
+                  <Analysis data={financialData} />
                 </CardContent>
               </Card>
             </TabsContent>
