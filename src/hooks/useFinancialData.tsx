@@ -388,13 +388,78 @@ export const useFinancialData = (userId: string | undefined) => {
       [section]: data
     };
 
-    console.log(newData)
     setFinancialData(newData);
     
-    // Auto-save after a short delay
+    // Auto-save only the specific section that changed
     setTimeout(() => {
-      saveFinancialData(newData);
+      saveSpecificSection(section, data);
     }, 1000);
+  };
+
+  const saveSpecificSection = async (section: keyof FinancialData, data: any) => {
+    if (!userId || !currentModelId) return;
+
+    try {
+      // Only save the specific section that changed
+      if (section === 'revenueStreams') {
+        await supabase
+          .from('revenue_streams')
+          .delete()
+          .eq('financial_model_id', currentModelId);
+
+        if (data.length > 0) {
+          await supabase
+            .from('revenue_streams')
+            .insert(
+              data.map((stream: any) => ({
+                financial_model_id: currentModelId,
+                name: stream.name,
+                year1: stream.year1,
+                year2: stream.year2,
+                year3: stream.year3
+              }))
+            );
+        }
+      } else if (section === 'taxation') {
+        await supabase
+          .from('taxation')
+          .delete()
+          .eq('financial_model_id', currentModelId);
+
+        await supabase
+          .from('taxation')
+          .insert([{
+            financial_model_id: currentModelId,
+            corporate_tax_rate: data.incomeTax.corporateRate,
+            vat_rate: data.zakat.rate,
+            other_taxes: 0
+          }]);
+      } else if (section === 'loansAndFinancing') {
+        if (data.loans.length > 0) {
+          await supabase
+            .from('loans_financing')
+            .delete()
+            .eq('financial_model_id', currentModelId);
+
+          await supabase
+            .from('loans_financing')
+            .insert(
+              data.loans.map((loan: any) => ({
+                financial_model_id: currentModelId,
+                type: loan.type,
+                amount: loan.principalAmount,
+                interest_rate: loan.interestRate,
+                term_years: Math.floor(loan.termMonths / 12)
+              }))
+            );
+        }
+      }
+      // For other sections like 'costs', we don't save to database yet
+      // as they're complex nested objects that need separate handling
+
+    } catch (error) {
+      console.error(`Error saving ${section}:`, error);
+    }
   };
 
   return {
