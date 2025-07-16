@@ -12,10 +12,12 @@ import { FinancialData } from "@/pages/Index";
 interface BalanceSheetProps {
   data: FinancialData['costs']['balanceSheet'];
   onChange: (data: FinancialData['costs']['balanceSheet']) => void;
+  revenueStreams: FinancialData['revenueStreams'];
 }
 
-const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange }) => {
+const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStreams }) => {
   const [activeTab, setActiveTab] = useState("fixed-assets");
+  const [selectedRevenueStream, setSelectedRevenueStream] = useState(revenueStreams[0]?.name || '');
 
   const updateFixedAssets = (assets: FinancialData['costs']['balanceSheet']['fixedAssets']['assets']) => {
     // Calculate total cost and depreciation
@@ -64,12 +66,35 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange }) => {
     );
   };
 
-  const updateARDays = (days: number) => {
+  const updateARDays = (revenueStreamName: string, days: number, revenueStreams: FinancialData['revenueStreams']) => {
+    // Calculate AR for this specific revenue stream
+    const revenueStream = revenueStreams.find(rs => rs.name === revenueStreamName);
+    if (!revenueStream) return;
+
+    const arForStream = {
+      arDays: days,
+      year1: (revenueStream.year1 * days) / 365,
+      year2: (revenueStream.year2 * days) / 365,
+      year3: (revenueStream.year3 * days) / 365
+    };
+
+    const newRevenueStreamARs = {
+      ...data.accountsReceivable.revenueStreamARs,
+      [revenueStreamName]: arForStream
+    };
+
+    // Calculate total AR
+    const totalYear1 = Object.values(newRevenueStreamARs).reduce((sum, ar) => sum + ar.year1, 0);
+    const totalYear2 = Object.values(newRevenueStreamARs).reduce((sum, ar) => sum + ar.year2, 0);
+    const totalYear3 = Object.values(newRevenueStreamARs).reduce((sum, ar) => sum + ar.year3, 0);
+
     onChange({
       ...data,
       accountsReceivable: {
-        ...data.accountsReceivable,
-        daysLinkedToRevenue: days
+        revenueStreamARs: newRevenueStreamARs,
+        totalYear1,
+        totalYear2,
+        totalYear3
       }
     });
   };
@@ -234,46 +259,97 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange }) => {
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-slate-700">Accounts Receivable</h3>
           
-          <Card className="border-l-4 border-green-500">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">A/R Configuration</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4 mb-4">
+          {revenueStreams.length > 0 ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-xs text-gray-500 mb-1 block">Days Linked to Revenue</Label>
-                  <Input
-                    type="number"
-                    placeholder="30"
-                    value={data.accountsReceivable.daysLinkedToRevenue || ''}
-                    onChange={(e) => updateARDays(Number(e.target.value))}
-                    className="h-8"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Average collection period in days</p>
+                  <Label className="text-xs text-gray-500 mb-1 block">Select Revenue Stream</Label>
+                  <Select value={selectedRevenueStream} onValueChange={setSelectedRevenueStream}>
+                    <SelectTrigger className="h-8 bg-white border border-gray-300 rounded-md shadow-sm z-50">
+                      <SelectValue placeholder="Select revenue stream" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
+                      {revenueStreams.map((stream) => (
+                        <SelectItem key={stream.name} value={stream.name}>
+                          {stream.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                {['year1', 'year2', 'year3'].map((year) => (
-                  <div key={year}>
-                    <Label className="text-xs text-gray-500 mb-1 block">
-                      {year === 'year1' ? 'Year 1 ($)' : year === 'year2' ? 'Year 2 ($)' : 'Year 3 ($)'}
-                    </Label>
+                {selectedRevenueStream && (
+                  <div>
+                    <Label className="text-xs text-gray-500 mb-1 block">AR Days for {selectedRevenueStream}</Label>
                     <Input
                       type="number"
-                      placeholder="Auto-calculated"
-                      value={data.accountsReceivable[year as 'year1' | 'year2' | 'year3'] || ''}
-                      readOnly
-                      className="h-8 bg-gray-50"
+                      placeholder="30"
+                      value={data.accountsReceivable.revenueStreamARs[selectedRevenueStream]?.arDays || ''}
+                      onChange={(e) => updateARDays(selectedRevenueStream, Number(e.target.value), revenueStreams)}
+                      className="h-8"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Based on {data.accountsReceivable.daysLinkedToRevenue} days of revenue
-                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Collection period in days</p>
                   </div>
-                ))}
+                )}
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Revenue Stream AR Details */}
+              {selectedRevenueStream && data.accountsReceivable.revenueStreamARs[selectedRevenueStream] && (
+                <Card className="border-l-4 border-green-500">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">AR Details for {selectedRevenueStream}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4">
+                      {(['year1', 'year2', 'year3'] as const).map((year) => (
+                        <div key={year}>
+                          <Label className="text-xs text-gray-500 mb-1 block">
+                            {year === 'year1' ? 'Year 1 ($)' : year === 'year2' ? 'Year 2 ($)' : 'Year 3 ($)'}
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="Auto-calculated"
+                            value={data.accountsReceivable.revenueStreamARs[selectedRevenueStream]?.[year]?.toLocaleString() || '0'}
+                            readOnly
+                            className="h-8 bg-gray-50"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Based on {data.accountsReceivable.revenueStreamARs[selectedRevenueStream]?.arDays || 0} days
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Total AR Summary */}
+              <Card className="bg-green-50">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Total Accounts Receivable</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-4">
+                    {(['year1', 'year2', 'year3'] as const).map((year) => (
+                      <div key={year}>
+                        <Label className="text-xs text-gray-500 mb-1 block">
+                          {year === 'year1' ? 'Year 1 ($)' : year === 'year2' ? 'Year 2 ($)' : 'Year 3 ($)'}
+                        </Label>
+                        <div className="text-lg font-semibold text-green-700">
+                          ${data.accountsReceivable[`total${year.charAt(0).toUpperCase() + year.slice(1)}` as keyof typeof data.accountsReceivable].toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card className="border-l-4 border-yellow-500">
+              <CardContent className="pt-6">
+                <p className="text-sm text-gray-600">Please add revenue streams first to configure accounts receivable.</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </TabsContent>
 
@@ -450,7 +526,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange }) => {
                 {['year1', 'year2', 'year3'].map((year) => {
                   const totalAssets = 
                     data.fixedAssets[year as 'year1' | 'year2' | 'year3'] +
-                    data.accountsReceivable[year as 'year1' | 'year2' | 'year3'] +
+                    data.accountsReceivable[`total${year.charAt(0).toUpperCase() + year.slice(1)}` as 'totalYear1' | 'totalYear2' | 'totalYear3'] +
                     data.cashAndBank[year as 'year1' | 'year2' | 'year3'] +
                     data.inventory[year as 'year1' | 'year2' | 'year3'] +
                     data.otherAssets[year as 'year1' | 'year2' | 'year3'];

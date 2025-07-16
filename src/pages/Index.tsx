@@ -21,6 +21,7 @@ export interface FinancialData {
     year2: number;
     year3: number;
     growthRate: number;
+    arDays: number; // Individual AR days per revenue stream
   }[];
   costs: {
     revenueStreamCosts: {
@@ -99,8 +100,17 @@ export interface FinancialData {
         year1: number; year2: number; year3: number;
       };
       accountsReceivable: {
-        daysLinkedToRevenue: number;
-        year1: number; year2: number; year3: number;
+        revenueStreamARs: {
+          [key: string]: { // revenue stream name as key
+            arDays: number;
+            year1: number;
+            year2: number;
+            year3: number;
+          };
+        };
+        totalYear1: number;
+        totalYear2: number;
+        totalYear3: number;
       };
       accountsPayable: {
         daysForPayment: number;
@@ -188,8 +198,10 @@ const Index = () => {
           year1: 0, year2: 0, year3: 0
         },
         accountsReceivable: {
-          daysLinkedToRevenue: 30,
-          year1: 0, year2: 0, year3: 0
+          revenueStreamARs: {},
+          totalYear1: 0,
+          totalYear2: 0,
+          totalYear3: 0
         },
         accountsPayable: {
           daysForPayment: 30,
@@ -404,6 +416,7 @@ const Index = () => {
                       ...financialData.costs,
                       balanceSheet: data
                     })}
+                    revenueStreams={financialData.revenueStreams}
                   />
                 </CardContent>
               </Card>
