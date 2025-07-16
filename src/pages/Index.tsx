@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import BalanceSheet from "@/components/BalanceSheet";
 import CompanySetup from "@/components/CompanySetup";
-import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface FinancialData {
   revenueStreams: {
@@ -192,6 +193,7 @@ export interface FinancialData {
 }
 
 const Index = () => {
+  const { user, signOut } = useAuth();
   const [industry, setIndustry] = useState<string>("");
   const [companyData, setCompanyData] = useState<any>(null);
   const [financialData, setFinancialData] = useState<FinancialData>({
@@ -303,13 +305,28 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-800 mb-2">
-            Financial Modeling Platform
-          </h1>
-          <p className="text-lg text-slate-600">
-            Build comprehensive financial models for your startup across any sector
-          </p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-bold text-slate-800 mb-2">
+              Financial Modeling Platform
+            </h1>
+            <p className="text-lg text-slate-600">
+              Build comprehensive financial models for your startup across any sector
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-slate-600">
+              {user?.email}
+            </span>
+            <Button 
+              variant="outline" 
+              onClick={signOut}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         {/* Company Setup or Main Content */}

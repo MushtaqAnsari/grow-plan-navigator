@@ -14,7 +14,309 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cost_structures: {
+        Row: {
+          created_at: string
+          financial_model_id: string
+          id: string
+          name: string
+          updated_at: string
+          year1: number | null
+          year2: number | null
+          year3: number | null
+          year4: number | null
+          year5: number | null
+        }
+        Insert: {
+          created_at?: string
+          financial_model_id: string
+          id?: string
+          name: string
+          updated_at?: string
+          year1?: number | null
+          year2?: number | null
+          year3?: number | null
+          year4?: number | null
+          year5?: number | null
+        }
+        Update: {
+          created_at?: string
+          financial_model_id?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          year1?: number | null
+          year2?: number | null
+          year3?: number | null
+          year4?: number | null
+          year5?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_structures_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_planning: {
+        Row: {
+          created_at: string
+          financial_model_id: string
+          id: string
+          role: string
+          salary_per_employee: number | null
+          updated_at: string
+          year1: number | null
+          year2: number | null
+          year3: number | null
+          year4: number | null
+          year5: number | null
+        }
+        Insert: {
+          created_at?: string
+          financial_model_id: string
+          id?: string
+          role: string
+          salary_per_employee?: number | null
+          updated_at?: string
+          year1?: number | null
+          year2?: number | null
+          year3?: number | null
+          year4?: number | null
+          year5?: number | null
+        }
+        Update: {
+          created_at?: string
+          financial_model_id?: string
+          id?: string
+          role?: string
+          salary_per_employee?: number | null
+          updated_at?: string
+          year1?: number | null
+          year2?: number | null
+          year3?: number | null
+          year4?: number | null
+          year5?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_planning_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_models: {
+        Row: {
+          company_name: string
+          created_at: string
+          currency: string | null
+          id: string
+          industry: string | null
+          language: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          currency?: string | null
+          id?: string
+          industry?: string | null
+          language?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          currency?: string | null
+          id?: string
+          industry?: string | null
+          language?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      loans_financing: {
+        Row: {
+          amount: number | null
+          created_at: string
+          financial_model_id: string
+          id: string
+          interest_rate: number | null
+          term_years: number | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          financial_model_id: string
+          id?: string
+          interest_rate?: number | null
+          term_years?: number | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          financial_model_id?: string
+          id?: string
+          interest_rate?: number | null
+          term_years?: number | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_financing_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operational_expenses: {
+        Row: {
+          created_at: string
+          financial_model_id: string
+          id: string
+          name: string
+          updated_at: string
+          year1: number | null
+          year2: number | null
+          year3: number | null
+          year4: number | null
+          year5: number | null
+        }
+        Insert: {
+          created_at?: string
+          financial_model_id: string
+          id?: string
+          name: string
+          updated_at?: string
+          year1?: number | null
+          year2?: number | null
+          year3?: number | null
+          year4?: number | null
+          year5?: number | null
+        }
+        Update: {
+          created_at?: string
+          financial_model_id?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          year1?: number | null
+          year2?: number | null
+          year3?: number | null
+          year4?: number | null
+          year5?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_expenses_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      revenue_streams: {
+        Row: {
+          created_at: string
+          financial_model_id: string
+          id: string
+          name: string
+          updated_at: string
+          year1: number | null
+          year2: number | null
+          year3: number | null
+          year4: number | null
+          year5: number | null
+        }
+        Insert: {
+          created_at?: string
+          financial_model_id: string
+          id?: string
+          name: string
+          updated_at?: string
+          year1?: number | null
+          year2?: number | null
+          year3?: number | null
+          year4?: number | null
+          year5?: number | null
+        }
+        Update: {
+          created_at?: string
+          financial_model_id?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          year1?: number | null
+          year2?: number | null
+          year3?: number | null
+          year4?: number | null
+          year5?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_streams_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      taxation: {
+        Row: {
+          corporate_tax_rate: number | null
+          created_at: string
+          financial_model_id: string
+          id: string
+          other_taxes: number | null
+          updated_at: string
+          vat_rate: number | null
+        }
+        Insert: {
+          corporate_tax_rate?: number | null
+          created_at?: string
+          financial_model_id: string
+          id?: string
+          other_taxes?: number | null
+          updated_at?: string
+          vat_rate?: number | null
+        }
+        Update: {
+          corporate_tax_rate?: number | null
+          created_at?: string
+          financial_model_id?: string
+          id?: string
+          other_taxes?: number | null
+          updated_at?: string
+          vat_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "taxation_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
