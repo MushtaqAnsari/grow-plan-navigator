@@ -6,397 +6,733 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Trash2, Plus, Users, TrendingUp, Percent } from 'lucide-react';
+import { Trash2, Plus, Users, TrendingUp, Percent, Calculator, FileText, Settings, Share2 } from 'lucide-react';
+
+interface Stakeholder {
+  id: string;
+  name: string;
+  type: 'founder' | 'employee' | 'investor' | 'advisor' | 'esop';
+  email?: string;
+  sharesOwned: number;
+  shareClass: string;
+  vestingSchedule?: {
+    totalShares: number;
+    vestedShares: number;
+    startDate: string;
+    cliffMonths: number;
+    vestingMonths: number;
+  };
+  investmentAmount?: number;
+  investmentDate?: string;
+}
 
 interface ShareClass {
   id: string;
   name: string;
-  type: 'common' | 'preferred' | 'option-pool';
-  shares: number;
+  type: 'common' | 'preferred' | 'esop' | 'safe';
+  sharesAuthorized: number;
+  sharesIssued: number;
   pricePerShare: number;
   liquidationPreference?: number;
-  preferenceMultiple?: number;
-  participationRights?: boolean;
+  dividendRate?: number;
+  participationRights?: 'participating' | 'non-participating';
+  antidilutionProvision?: 'weighted-average' | 'full-ratchet' | 'none';
+  votingRights?: boolean;
 }
 
-interface Investment {
+interface SAFEAgreement {
   id: string;
   investorName: string;
-  round: string;
   amount: number;
-  shareClass: string;
-  shares: number;
-  pricePerShare: number;
+  valuationCap?: number;
+  discountRate?: number;
+  conversionTrigger: 'equity-round' | 'liquidity-event' | 'maturity';
   date: string;
-  valuation: number;
+  status: 'active' | 'converted' | 'expired';
+}
+
+interface FundingRound {
+  id: string;
+  name: string;
+  amount: number;
+  preMoneyValuation: number;
+  postMoneyValuation: number;
+  shareClass: string;
+  leadInvestor: string;
+  date: string;
+  status: 'planned' | 'active' | 'closed';
 }
 
 interface CapTableData {
+  companyName: string;
   shareClasses: ShareClass[];
-  investments: Investment[];
-  companyValuation: number;
+  stakeholders: Stakeholder[];
+  safeAgreements: SAFEAgreement[];
+  fundingRounds: FundingRound[];
+  esopPool: {
+    totalShares: number;
+    allocatedShares: number;
+    availableShares: number;
+    poolPercentage: number;
+  };
 }
 
 const ValuationModel = () => {
   const [capTableData, setCapTableData] = useState<CapTableData>({
+    companyName: "Your Startup",
     shareClasses: [
       {
         id: '1',
-        name: 'Founder Shares',
+        name: 'Common Stock',
         type: 'common',
-        shares: 8000000,
-        pricePerShare: 0.001
+        sharesAuthorized: 10000000,
+        sharesIssued: 8000000,
+        pricePerShare: 0.001,
+        votingRights: true
       },
       {
         id: '2',
-        name: 'Employee Option Pool',
-        type: 'option-pool',
-        shares: 2000000,
-        pricePerShare: 0.001
+        name: 'ESOP Pool',
+        type: 'esop',
+        sharesAuthorized: 2000000,
+        sharesIssued: 500000,
+        pricePerShare: 0.001,
+        votingRights: false
       }
     ],
-    investments: [
+    stakeholders: [
       {
         id: '1',
-        investorName: 'Founders',
-        round: 'Initial',
-        amount: 8000,
-        shareClass: 'Founder Shares',
-        shares: 8000000,
-        pricePerShare: 0.001,
-        date: '2024-01-01',
-        valuation: 10000
+        name: 'John Doe',
+        type: 'founder',
+        email: 'john@startup.com',
+        sharesOwned: 6000000,
+        shareClass: 'Common Stock',
+        vestingSchedule: {
+          totalShares: 6000000,
+          vestedShares: 1500000,
+          startDate: '2024-01-01',
+          cliffMonths: 12,
+          vestingMonths: 48
+        }
+      },
+      {
+        id: '2',
+        name: 'Jane Smith',
+        type: 'founder',
+        email: 'jane@startup.com',
+        sharesOwned: 2000000,
+        shareClass: 'Common Stock',
+        vestingSchedule: {
+          totalShares: 2000000,
+          vestedShares: 500000,
+          startDate: '2024-01-01',
+          cliffMonths: 12,
+          vestingMonths: 48
+        }
       }
     ],
-    companyValuation: 10000000
+    safeAgreements: [
+      {
+        id: '1',
+        investorName: 'Angel Investor',
+        amount: 100000,
+        valuationCap: 5000000,
+        discountRate: 20,
+        conversionTrigger: 'equity-round',
+        date: '2024-03-15',
+        status: 'active'
+      }
+    ],
+    fundingRounds: [],
+    esopPool: {
+      totalShares: 2000000,
+      allocatedShares: 500000,
+      availableShares: 1500000,
+      poolPercentage: 20
+    }
   });
 
-  const [newShareClass, setNewShareClass] = useState<Partial<ShareClass>>({
+  const [activeScenario, setActiveScenario] = useState<string | null>(null);
+  const [newFundingRound, setNewFundingRound] = useState<Partial<FundingRound>>({
     name: '',
-    type: 'common',
-    shares: 0,
-    pricePerShare: 0
-  });
-
-  const [newInvestment, setNewInvestment] = useState<Partial<Investment>>({
-    investorName: '',
-    round: '',
     amount: 0,
+    preMoneyValuation: 0,
     shareClass: '',
+    leadInvestor: '',
     date: ''
   });
 
-  const totalShares = capTableData.shareClasses.reduce((sum, sc) => sum + sc.shares, 0);
-  
-  const addShareClass = () => {
-    if (newShareClass.name && newShareClass.shares && newShareClass.pricePerShare) {
-      setCapTableData(prev => ({
-        ...prev,
-        shareClasses: [
-          ...prev.shareClasses,
-          {
-            id: Date.now().toString(),
-            name: newShareClass.name!,
-            type: newShareClass.type!,
-            shares: newShareClass.shares!,
-            pricePerShare: newShareClass.pricePerShare!,
-            liquidationPreference: newShareClass.liquidationPreference,
-            preferenceMultiple: newShareClass.preferenceMultiple,
-            participationRights: newShareClass.participationRights
-          }
-        ]
-      }));
-      setNewShareClass({ name: '', type: 'common', shares: 0, pricePerShare: 0 });
-    }
-  };
+  const [newSAFE, setNewSAFE] = useState<Partial<SAFEAgreement>>({
+    investorName: '',
+    amount: 0,
+    valuationCap: 0,
+    discountRate: 0,
+    date: ''
+  });
 
-  const addInvestment = () => {
-    if (newInvestment.investorName && newInvestment.amount && newInvestment.shareClass) {
-      const shareClass = capTableData.shareClasses.find(sc => sc.name === newInvestment.shareClass);
-      if (shareClass) {
-        const shares = newInvestment.amount! / shareClass.pricePerShare;
-        setCapTableData(prev => ({
-          ...prev,
-          investments: [
-            ...prev.investments,
-            {
-              id: Date.now().toString(),
-              investorName: newInvestment.investorName!,
-              round: newInvestment.round!,
-              amount: newInvestment.amount!,
-              shareClass: newInvestment.shareClass!,
-              shares: shares,
-              pricePerShare: shareClass.pricePerShare,
-              date: newInvestment.date!,
-              valuation: capTableData.companyValuation
-            }
-          ]
-        }));
-        setNewInvestment({ investorName: '', round: '', amount: 0, shareClass: '', date: '' });
-      }
-    }
-  };
+  const [newStakeholder, setNewStakeholder] = useState<Partial<Stakeholder>>({
+    name: '',
+    type: 'employee',
+    email: '',
+    sharesOwned: 0,
+    shareClass: ''
+  });
 
-  const ownershipData = capTableData.shareClasses.map(sc => ({
-    name: sc.name,
-    shares: sc.shares,
-    percentage: (sc.shares / totalShares) * 100,
-    value: sc.shares * sc.pricePerShare
-  }));
+  const totalSharesIssued = capTableData.shareClasses.reduce((sum, sc) => sum + sc.sharesIssued, 0);
+  const totalSAFEAmount = capTableData.safeAgreements
+    .filter(safe => safe.status === 'active')
+    .reduce((sum, safe) => sum + safe.amount, 0);
 
-  const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', '#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
-
-  const dilutionScenarios = [
-    { scenario: 'Series A - $2M', newShares: 2000000, pricePerShare: 1.0 },
-    { scenario: 'Series B - $5M', newShares: 2500000, pricePerShare: 2.0 },
-    { scenario: 'Series C - $10M', newShares: 2000000, pricePerShare: 5.0 }
-  ];
-
-  const calculateDilution = (newShares: number) => {
-    const newTotal = totalShares + newShares;
-    return ownershipData.map(item => ({
-      ...item,
-      newPercentage: (item.shares / newTotal) * 100,
-      dilution: ((item.shares / totalShares) * 100) - ((item.shares / newTotal) * 100)
+  const calculateOwnershipPercentages = () => {
+    return capTableData.stakeholders.map(stakeholder => ({
+      ...stakeholder,
+      ownershipPercentage: (stakeholder.sharesOwned / totalSharesIssued) * 100
     }));
   };
 
+  const calculateProFormaOwnership = (fundingRound: Partial<FundingRound>) => {
+    if (!fundingRound.amount || !fundingRound.preMoneyValuation) return [];
+
+    const preMoney = fundingRound.preMoneyValuation;
+    const newInvestment = fundingRound.amount;
+    const postMoney = preMoney + newInvestment;
+    
+    // Calculate new shares to be issued
+    const newSharePrice = postMoney / (totalSharesIssued + (newInvestment / (postMoney / totalSharesIssued)));
+    const newShares = newInvestment / newSharePrice;
+    const newTotalShares = totalSharesIssued + newShares;
+
+    // Calculate SAFE conversions
+    const convertedSAFEs = capTableData.safeAgreements
+      .filter(safe => safe.status === 'active')
+      .map(safe => {
+        const conversionPrice = safe.valuationCap ? 
+          Math.min(newSharePrice, (safe.valuationCap / totalSharesIssued)) : 
+          newSharePrice * (1 - (safe.discountRate || 0) / 100);
+        const convertedShares = safe.amount / conversionPrice;
+        return { ...safe, convertedShares, conversionPrice };
+      });
+
+    const totalConvertedShares = convertedSAFEs.reduce((sum, safe) => sum + safe.convertedShares, 0);
+    const finalTotalShares = newTotalShares + totalConvertedShares;
+
+    return capTableData.stakeholders.map(stakeholder => ({
+      ...stakeholder,
+      currentOwnership: (stakeholder.sharesOwned / totalSharesIssued) * 100,
+      proFormaOwnership: (stakeholder.sharesOwned / finalTotalShares) * 100,
+      dilution: ((stakeholder.sharesOwned / totalSharesIssued) - (stakeholder.sharesOwned / finalTotalShares)) * 100
+    }));
+  };
+
+  const addFundingRound = () => {
+    if (newFundingRound.name && newFundingRound.amount && newFundingRound.preMoneyValuation) {
+      const postMoneyValuation = newFundingRound.preMoneyValuation + newFundingRound.amount;
+      setCapTableData(prev => ({
+        ...prev,
+        fundingRounds: [
+          ...prev.fundingRounds,
+          {
+            id: Date.now().toString(),
+            ...newFundingRound as FundingRound,
+            postMoneyValuation,
+            status: 'planned'
+          }
+        ]
+      }));
+      setNewFundingRound({ name: '', amount: 0, preMoneyValuation: 0, shareClass: '', leadInvestor: '', date: '' });
+    }
+  };
+
+  const addSAFE = () => {
+    if (newSAFE.investorName && newSAFE.amount) {
+      setCapTableData(prev => ({
+        ...prev,
+        safeAgreements: [
+          ...prev.safeAgreements,
+          {
+            id: Date.now().toString(),
+            ...newSAFE as SAFEAgreement,
+            conversionTrigger: 'equity-round',
+            status: 'active'
+          }
+        ]
+      }));
+      setNewSAFE({ investorName: '', amount: 0, valuationCap: 0, discountRate: 0, date: '' });
+    }
+  };
+
+  const addStakeholder = () => {
+    if (newStakeholder.name && newStakeholder.sharesOwned && newStakeholder.shareClass) {
+      setCapTableData(prev => ({
+        ...prev,
+        stakeholders: [
+          ...prev.stakeholders,
+          {
+            id: Date.now().toString(),
+            ...newStakeholder as Stakeholder
+          }
+        ]
+      }));
+      setNewStakeholder({ name: '', type: 'employee', email: '', sharesOwned: 0, shareClass: '' });
+    }
+  };
+
+  const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', '#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#ff6b6b', '#4ecdc4'];
+
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">{capTableData.companyName} - Cap Table</h2>
+          <p className="text-muted-foreground">Professional equity management and scenario modeling</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm">
+            <Share2 className="w-4 h-4 mr-2" />
+            Share View
+          </Button>
+          <Button variant="outline" size="sm">
+            <FileText className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+        </div>
+      </div>
+
       <Tabs defaultValue="cap-table" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="cap-table">Cap Table</TabsTrigger>
+          <TabsTrigger value="stakeholders">Stakeholders</TabsTrigger>
+          <TabsTrigger value="safe">SAFE & Convertibles</TabsTrigger>
+          <TabsTrigger value="scenarios">Scenario Modeling</TabsTrigger>
           <TabsTrigger value="ownership">Ownership</TabsTrigger>
-          <TabsTrigger value="dilution">Dilution Analysis</TabsTrigger>
-          <TabsTrigger value="valuation">Valuation Model</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
         <TabsContent value="cap-table" className="space-y-6">
-          {/* Share Classes */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium">Total Shares Issued</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{totalSharesIssued.toLocaleString()}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  <span className="text-sm font-medium">Active SAFEs</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">${totalSAFEAmount.toLocaleString()}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2">
+                  <Percent className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium">ESOP Available</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{((capTableData.esopPool.availableShares / totalSharesIssued) * 100).toFixed(1)}%</div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Share Classes
-              </CardTitle>
+              <CardTitle>Share Classes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Class Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Shares</TableHead>
-                      <TableHead>Price/Share</TableHead>
-                      <TableHead>Total Value</TableHead>
-                      <TableHead>% Ownership</TableHead>
-                      <TableHead>Actions</TableHead>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Class Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Authorized</TableHead>
+                    <TableHead>Issued</TableHead>
+                    <TableHead>Available</TableHead>
+                    <TableHead>Price/Share</TableHead>
+                    <TableHead>Voting Rights</TableHead>
+                    <TableHead>Liquidation Preference</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {capTableData.shareClasses.map((sc) => (
+                    <TableRow key={sc.id}>
+                      <TableCell className="font-medium">{sc.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={sc.type === 'common' ? 'default' : sc.type === 'preferred' ? 'secondary' : 'outline'}>
+                          {sc.type.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{sc.sharesAuthorized.toLocaleString()}</TableCell>
+                      <TableCell>{sc.sharesIssued.toLocaleString()}</TableCell>
+                      <TableCell>{(sc.sharesAuthorized - sc.sharesIssued).toLocaleString()}</TableCell>
+                      <TableCell>${sc.pricePerShare.toFixed(3)}</TableCell>
+                      <TableCell>{sc.votingRights ? '✓' : '✗'}</TableCell>
+                      <TableCell>{sc.liquidationPreference ? `${sc.liquidationPreference}x` : 'N/A'}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {capTableData.shareClasses.map((sc) => (
-                      <TableRow key={sc.id}>
-                        <TableCell className="font-medium">{sc.name}</TableCell>
-                        <TableCell className="capitalize">{sc.type.replace('-', ' ')}</TableCell>
-                        <TableCell>{sc.shares.toLocaleString()}</TableCell>
-                        <TableCell>${sc.pricePerShare.toFixed(3)}</TableCell>
-                        <TableCell>${(sc.shares * sc.pricePerShare).toLocaleString()}</TableCell>
-                        <TableCell>{((sc.shares / totalShares) * 100).toFixed(2)}%</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setCapTableData(prev => ({
-                              ...prev,
-                              shareClasses: prev.shareClasses.filter(s => s.id !== sc.id)
-                            }))}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                {/* Add New Share Class */}
-                <div className="border rounded-lg p-4 bg-muted/20">
-                  <h4 className="font-medium mb-3">Add New Share Class</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    <div>
-                      <Label htmlFor="className">Class Name</Label>
-                      <Input
-                        id="className"
-                        value={newShareClass.name}
-                        onChange={(e) => setNewShareClass(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., Series A Preferred"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="classType">Type</Label>
-                      <Select
-                        value={newShareClass.type}
-                        onValueChange={(value: 'common' | 'preferred' | 'option-pool') => 
-                          setNewShareClass(prev => ({ ...prev, type: value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="common">Common</SelectItem>
-                          <SelectItem value="preferred">Preferred</SelectItem>
-                          <SelectItem value="option-pool">Option Pool</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="shares">Shares</Label>
-                      <Input
-                        id="shares"
-                        type="number"
-                        value={newShareClass.shares}
-                        onChange={(e) => setNewShareClass(prev => ({ ...prev, shares: Number(e.target.value) }))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="pricePerShare">Price/Share ($)</Label>
-                      <Input
-                        id="pricePerShare"
-                        type="number"
-                        step="0.001"
-                        value={newShareClass.pricePerShare}
-                        onChange={(e) => setNewShareClass(prev => ({ ...prev, pricePerShare: Number(e.target.value) }))}
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <Button onClick={addShareClass} className="w-full">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Class
-                      </Button>
-                    </div>
+        <TabsContent value="stakeholders" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Stakeholder Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Shares Owned</TableHead>
+                    <TableHead>Share Class</TableHead>
+                    <TableHead>Ownership %</TableHead>
+                    <TableHead>Vesting Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {calculateOwnershipPercentages().map((stakeholder) => (
+                    <TableRow key={stakeholder.id}>
+                      <TableCell className="font-medium">{stakeholder.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={stakeholder.type === 'founder' ? 'default' : 'outline'}>
+                          {stakeholder.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{stakeholder.email || 'N/A'}</TableCell>
+                      <TableCell>{stakeholder.sharesOwned.toLocaleString()}</TableCell>
+                      <TableCell>{stakeholder.shareClass}</TableCell>
+                      <TableCell>{stakeholder.ownershipPercentage.toFixed(2)}%</TableCell>
+                      <TableCell>
+                        {stakeholder.vestingSchedule ? (
+                          <div className="text-sm">
+                            <div>{stakeholder.vestingSchedule.vestedShares.toLocaleString()} vested</div>
+                            <div className="text-muted-foreground">
+                              of {stakeholder.vestingSchedule.totalShares.toLocaleString()}
+                            </div>
+                          </div>
+                        ) : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm">
+                          <Settings className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <div className="border rounded-lg p-4 bg-muted/20 mt-6">
+                <h4 className="font-medium mb-3">Add New Stakeholder</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div>
+                    <Label>Name</Label>
+                    <Input
+                      value={newStakeholder.name}
+                      onChange={(e) => setNewStakeholder(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Full name"
+                    />
+                  </div>
+                  <div>
+                    <Label>Type</Label>
+                    <Select
+                      value={newStakeholder.type}
+                      onValueChange={(value: any) => setNewStakeholder(prev => ({ ...prev, type: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="founder">Founder</SelectItem>
+                        <SelectItem value="employee">Employee</SelectItem>
+                        <SelectItem value="investor">Investor</SelectItem>
+                        <SelectItem value="advisor">Advisor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input
+                      value={newStakeholder.email}
+                      onChange={(e) => setNewStakeholder(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="email@company.com"
+                    />
+                  </div>
+                  <div>
+                    <Label>Shares</Label>
+                    <Input
+                      type="number"
+                      value={newStakeholder.sharesOwned}
+                      onChange={(e) => setNewStakeholder(prev => ({ ...prev, sharesOwned: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Share Class</Label>
+                    <Select
+                      value={newStakeholder.shareClass}
+                      onValueChange={(value) => setNewStakeholder(prev => ({ ...prev, shareClass: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {capTableData.shareClasses.map((sc) => (
+                          <SelectItem key={sc.id} value={sc.name}>{sc.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={addStakeholder} className="w-full">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add
+                    </Button>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Investments */}
+        <TabsContent value="safe" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>SAFE Agreements & Convertible Securities</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Investor</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Valuation Cap</TableHead>
+                    <TableHead>Discount Rate</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {capTableData.safeAgreements.map((safe) => (
+                    <TableRow key={safe.id}>
+                      <TableCell className="font-medium">{safe.investorName}</TableCell>
+                      <TableCell>${safe.amount.toLocaleString()}</TableCell>
+                      <TableCell>${safe.valuationCap?.toLocaleString() || 'None'}</TableCell>
+                      <TableCell>{safe.discountRate ? `${safe.discountRate}%` : 'None'}</TableCell>
+                      <TableCell>{safe.date}</TableCell>
+                      <TableCell>
+                        <Badge variant={safe.status === 'active' ? 'default' : 'outline'}>
+                          {safe.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm">
+                          Convert
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <div className="border rounded-lg p-4 bg-muted/20 mt-6">
+                <h4 className="font-medium mb-3">Add New SAFE</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div>
+                    <Label>Investor Name</Label>
+                    <Input
+                      value={newSAFE.investorName}
+                      onChange={(e) => setNewSAFE(prev => ({ ...prev, investorName: e.target.value }))}
+                      placeholder="Investor name"
+                    />
+                  </div>
+                  <div>
+                    <Label>Amount ($)</Label>
+                    <Input
+                      type="number"
+                      value={newSAFE.amount}
+                      onChange={(e) => setNewSAFE(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Valuation Cap ($)</Label>
+                    <Input
+                      type="number"
+                      value={newSAFE.valuationCap}
+                      onChange={(e) => setNewSAFE(prev => ({ ...prev, valuationCap: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Discount Rate (%)</Label>
+                    <Input
+                      type="number"
+                      value={newSAFE.discountRate}
+                      onChange={(e) => setNewSAFE(prev => ({ ...prev, discountRate: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Date</Label>
+                    <Input
+                      type="date"
+                      value={newSAFE.date}
+                      onChange={(e) => setNewSAFE(prev => ({ ...prev, date: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={addSAFE} className="w-full">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add SAFE
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="scenarios" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Investment History
+                <Calculator className="w-5 h-5" />
+                Funding Round Scenarios
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Investor</TableHead>
-                      <TableHead>Round</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Share Class</TableHead>
-                      <TableHead>Shares</TableHead>
-                      <TableHead>Price/Share</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {capTableData.investments.map((inv) => (
-                      <TableRow key={inv.id}>
-                        <TableCell className="font-medium">{inv.investorName}</TableCell>
-                        <TableCell>{inv.round}</TableCell>
-                        <TableCell>${inv.amount.toLocaleString()}</TableCell>
-                        <TableCell>{inv.shareClass}</TableCell>
-                        <TableCell>{inv.shares.toLocaleString()}</TableCell>
-                        <TableCell>${inv.pricePerShare.toFixed(3)}</TableCell>
-                        <TableCell>{inv.date}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setCapTableData(prev => ({
-                              ...prev,
-                              investments: prev.investments.filter(i => i.id !== inv.id)
-                            }))}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-
-                {/* Add New Investment */}
+              <div className="space-y-6">
+                {/* Add New Funding Round */}
                 <div className="border rounded-lg p-4 bg-muted/20">
-                  <h4 className="font-medium mb-3">Add New Investment</h4>
+                  <h4 className="font-medium mb-3">Model New Funding Round</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     <div>
-                      <Label htmlFor="investorName">Investor Name</Label>
+                      <Label>Round Name</Label>
                       <Input
-                        id="investorName"
-                        value={newInvestment.investorName}
-                        onChange={(e) => setNewInvestment(prev => ({ ...prev, investorName: e.target.value }))}
-                        placeholder="e.g., Venture Capital Fund"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="round">Round</Label>
-                      <Input
-                        id="round"
-                        value={newInvestment.round}
-                        onChange={(e) => setNewInvestment(prev => ({ ...prev, round: e.target.value }))}
+                        value={newFundingRound.name}
+                        onChange={(e) => setNewFundingRound(prev => ({ ...prev, name: e.target.value }))}
                         placeholder="e.g., Series A"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="amount">Amount ($)</Label>
+                      <Label>Amount ($)</Label>
                       <Input
-                        id="amount"
                         type="number"
-                        value={newInvestment.amount}
-                        onChange={(e) => setNewInvestment(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                        value={newFundingRound.amount}
+                        onChange={(e) => setNewFundingRound(prev => ({ ...prev, amount: Number(e.target.value) }))}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="shareClassSelect">Share Class</Label>
-                      <Select
-                        value={newInvestment.shareClass}
-                        onValueChange={(value) => setNewInvestment(prev => ({ ...prev, shareClass: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select share class" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {capTableData.shareClasses.map((sc) => (
-                            <SelectItem key={sc.id} value={sc.name}>{sc.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label>Pre-Money Valuation ($)</Label>
+                      <Input
+                        type="number"
+                        value={newFundingRound.preMoneyValuation}
+                        onChange={(e) => setNewFundingRound(prev => ({ ...prev, preMoneyValuation: Number(e.target.value) }))}
+                      />
                     </div>
                     <div>
-                      <Label htmlFor="date">Date</Label>
+                      <Label>Lead Investor</Label>
                       <Input
-                        id="date"
+                        value={newFundingRound.leadInvestor}
+                        onChange={(e) => setNewFundingRound(prev => ({ ...prev, leadInvestor: e.target.value }))}
+                        placeholder="Investor name"
+                      />
+                    </div>
+                    <div>
+                      <Label>Expected Date</Label>
+                      <Input
                         type="date"
-                        value={newInvestment.date}
-                        onChange={(e) => setNewInvestment(prev => ({ ...prev, date: e.target.value }))}
+                        value={newFundingRound.date}
+                        onChange={(e) => setNewFundingRound(prev => ({ ...prev, date: e.target.value }))}
                       />
                     </div>
                     <div className="flex items-end">
-                      <Button onClick={addInvestment} className="w-full">
+                      <Button onClick={addFundingRound} className="w-full">
                         <Plus className="w-4 h-4 mr-2" />
-                        Add Investment
+                        Model Round
                       </Button>
                     </div>
                   </div>
                 </div>
+
+                {/* Funding Rounds & Pro-Forma Analysis */}
+                {capTableData.fundingRounds.map((round) => (
+                  <Card key={round.id} className="border-l-4 border-l-primary">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">{round.name} - Pro-Forma Analysis</CardTitle>
+                          <p className="text-muted-foreground">
+                            ${round.amount.toLocaleString()} at ${round.preMoneyValuation.toLocaleString()} pre-money
+                          </p>
+                        </div>
+                        <Badge variant={round.status === 'planned' ? 'outline' : 'default'}>
+                          {round.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <h4 className="font-medium mb-3">Round Details</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span>Investment Amount:</span>
+                              <span className="font-medium">${round.amount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Pre-Money Valuation:</span>
+                              <span className="font-medium">${round.preMoneyValuation.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Post-Money Valuation:</span>
+                              <span className="font-medium">${round.postMoneyValuation.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Investor Ownership:</span>
+                              <span className="font-medium">{((round.amount / round.postMoneyValuation) * 100).toFixed(2)}%</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium mb-3">Pro-Forma Ownership</h4>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Stakeholder</TableHead>
+                                <TableHead>Current %</TableHead>
+                                <TableHead>Pro-Forma %</TableHead>
+                                <TableHead>Dilution</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {calculateProFormaOwnership(round).slice(0, 5).map((stakeholder) => (
+                                <TableRow key={stakeholder.id}>
+                                  <TableCell className="font-medium">{stakeholder.name}</TableCell>
+                                  <TableCell>{stakeholder.currentOwnership.toFixed(2)}%</TableCell>
+                                  <TableCell>{stakeholder.proFormaOwnership.toFixed(2)}%</TableCell>
+                                  <TableCell className="text-red-600">-{stakeholder.dilution.toFixed(2)}%</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -406,26 +742,26 @@ const ValuationModel = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Ownership Distribution</CardTitle>
+                <CardTitle>Current Ownership Distribution</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={ownershipData}
+                        data={calculateOwnershipPercentages()}
                         cx="50%"
                         cy="50%"
                         outerRadius={80}
                         fill="#8884d8"
-                        dataKey="shares"
-                        label={({ name, percentage }) => `${name}: ${percentage.toFixed(1)}%`}
+                        dataKey="sharesOwned"
+                        label={({ name, ownershipPercentage }) => `${name}: ${ownershipPercentage.toFixed(1)}%`}
                       >
-                        {ownershipData.map((entry, index) => (
+                        {calculateOwnershipPercentages().map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: any, name) => [value.toLocaleString(), name]} />
+                      <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -434,129 +770,85 @@ const ValuationModel = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Ownership Summary</CardTitle>
+                <CardTitle>ESOP Pool Management</CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Share Class</TableHead>
-                      <TableHead>Shares</TableHead>
-                      <TableHead>Percentage</TableHead>
-                      <TableHead>Value</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {ownershipData.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell>{item.shares.toLocaleString()}</TableCell>
-                        <TableCell>{item.percentage.toFixed(2)}%</TableCell>
-                        <TableCell>${item.value.toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow className="font-semibold bg-muted/50">
-                      <TableCell>Total</TableCell>
-                      <TableCell>{totalShares.toLocaleString()}</TableCell>
-                      <TableCell>100.00%</TableCell>
-                      <TableCell>${ownershipData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Total ESOP Shares:</span>
+                    <span className="font-medium">{capTableData.esopPool.totalShares.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Allocated:</span>
+                    <span className="font-medium">{capTableData.esopPool.allocatedShares.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Available:</span>
+                    <span className="font-medium text-green-600">{capTableData.esopPool.availableShares.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Pool Percentage:</span>
+                    <span className="font-medium">{capTableData.esopPool.poolPercentage}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div 
+                      className="bg-primary h-2.5 rounded-full" 
+                      style={{ width: `${(capTableData.esopPool.allocatedShares / capTableData.esopPool.totalShares) * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {((capTableData.esopPool.allocatedShares / capTableData.esopPool.totalShares) * 100).toFixed(1)}% of ESOP pool allocated
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="dilution" className="space-y-6">
+        <TabsContent value="reports" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Percent className="w-5 h-5" />
-                Dilution Analysis
-              </CardTitle>
+              <CardTitle>Cap Table Reports & Sharing</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {dilutionScenarios.map((scenario, index) => {
-                  const dilutionData = calculateDilution(scenario.newShares);
-                  return (
-                    <div key={index} className="border rounded-lg p-4">
-                      <h4 className="font-medium mb-3">{scenario.scenario}</h4>
-                      <div className="text-sm text-muted-foreground mb-3">
-                        New shares: {scenario.newShares.toLocaleString()} at ${scenario.pricePerShare}/share
-                      </div>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Share Class</TableHead>
-                            <TableHead>Current %</TableHead>
-                            <TableHead>New %</TableHead>
-                            <TableHead>Dilution</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {dilutionData.map((item, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell className="font-medium">{item.name}</TableCell>
-                              <TableCell>{item.percentage.toFixed(2)}%</TableCell>
-                              <TableCell>{item.newPercentage.toFixed(2)}%</TableCell>
-                              <TableCell className="text-red-600">-{item.dilution.toFixed(2)}%</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Button variant="outline" className="h-20 flex-col gap-2">
+                  <FileText className="w-6 h-6" />
+                  <span>Full Cap Table</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2">
+                  <Share2 className="w-6 h-6" />
+                  <span>Investor View</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2">
+                  <Users className="w-6 h-6" />
+                  <span>Employee View</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2">
+                  <Calculator className="w-6 h-6" />
+                  <span>Waterfall Analysis</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2">
+                  <TrendingUp className="w-6 h-6" />
+                  <span>Dilution Report</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2">
+                  <Percent className="w-6 h-6" />
+                  <span>Ownership Summary</span>
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="valuation" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Company Valuation Model</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="valuation">Current Company Valuation ($)</Label>
-                    <Input
-                      id="valuation"
-                      type="number"
-                      value={capTableData.companyValuation}
-                      onChange={(e) => setCapTableData(prev => ({
-                        ...prev,
-                        companyValuation: Number(e.target.value)
-                      }))}
-                    />
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    <p>Price per share: ${(capTableData.companyValuation / totalShares).toFixed(4)}</p>
-                    <p>Total shares outstanding: {totalShares.toLocaleString()}</p>
-                    <p>Market cap: ${capTableData.companyValuation.toLocaleString()}</p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <h4 className="font-medium">Valuation Metrics</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Fully Diluted Shares:</span>
-                      <span>{totalShares.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Pre-money Valuation:</span>
-                      <span>${capTableData.companyValuation.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Book Value per Share:</span>
-                      <span>${(capTableData.companyValuation / totalShares).toFixed(4)}</span>
-                    </div>
-                  </div>
-                </div>
+              
+              <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100">Clara-Style Features</h4>
+                <ul className="list-disc list-inside text-sm text-blue-800 dark:text-blue-200 mt-2 space-y-1">
+                  <li>Automated cap table updates with real-time accuracy</li>
+                  <li>SAFE conversion modeling with multiple scenarios</li>
+                  <li>Customizable stakeholder views for transparency</li>
+                  <li>Pro-forma ownership calculations for funding rounds</li>
+                  <li>ESOP pool management with vesting schedules</li>
+                  <li>Waterfall analysis for exit scenarios</li>
+                  <li>Export capabilities for legal and compliance needs</li>
+                </ul>
               </div>
             </CardContent>
           </Card>
