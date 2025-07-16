@@ -24,8 +24,6 @@ function LoadingSpinner() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
-  console.log(user, loading)
   
   if (loading) {
     return <LoadingSpinner />;
@@ -40,8 +38,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { loading } = useAuth();
-
-  console.log(loading)
   
   if (loading) {
     return <LoadingSpinner />;
