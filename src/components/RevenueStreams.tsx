@@ -58,7 +58,7 @@ interface RevenueStream {
 
 interface RevenueStreamsProps {
   data: RevenueStream[];
-  onChange: (data: RevenueStream) => void;
+  onChange: (data: RevenueStream[]) => void;
   industry: string;
 }
 
@@ -185,7 +185,8 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
   const addRevenueStream = () => {
     if (newStream.name) {
       const calculatedStream = calculateRevenue(newStream);
-      onChange(calculatedStream);
+      // Send only the new stream, let parent handle array management
+      onChange([calculatedStream]);
       setNewStream(getEmptyStream());
     }
   };

@@ -75,7 +75,15 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ data, onUpdateData })
               <RevenueStreams 
                 data={data.revenueStreams}
                 industry="edtech"
-                onChange={(streams) => updateFinancialData('revenueStreams', streams)}
+                onChange={(newStreams) => {
+                  // If it's a single new stream, append to existing array
+                  if (newStreams.length === 1) {
+                    updateFinancialData('revenueStreams', [...data.revenueStreams, ...newStreams]);
+                  } else {
+                    // For updates/removes, replace the entire array
+                    updateFinancialData('revenueStreams', newStreams);
+                  }
+                }}
               />
             </CardContent>
           </Card>
