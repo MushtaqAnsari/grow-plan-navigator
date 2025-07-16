@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface RevenueStream {
   name: string;
+  type: 'saas' | 'ecommerce' | 'advertising' | 'one-time' | 'consulting' | 'commission' | 'freemium';
   // Calculated fields
   year1: number;
   year2: number;
@@ -20,7 +22,7 @@ interface RevenueStream {
   endingClientsY2?: number;
   endingClientsY3?: number;
   startingRevenuePerClient?: number;
-  priceIncreaseRate?: number; // Yearly price increase percentage
+  priceIncreaseRate?: number;
   
   // E-commerce specific
   startingMonthlyOrders?: number;
@@ -28,7 +30,30 @@ interface RevenueStream {
   endingMonthlyOrdersY2?: number;
   endingMonthlyOrdersY3?: number;
   startingAOV?: number;
-  aovIncreaseRate?: number; // Yearly AOV increase percentage
+  aovIncreaseRate?: number;
+  
+  // Advertising specific
+  monthlyImpressions?: number;
+  cpmRate?: number;
+  impressionGrowthRate?: number;
+  
+  // One-time specific
+  unitsSoldY1?: number;
+  unitsSoldY2?: number;
+  unitsSoldY3?: number;
+  pricePerUnit?: number;
+  
+  // Consulting specific
+  billableHoursY1?: number;
+  billableHoursY2?: number;
+  billableHoursY3?: number;
+  hourlyRate?: number;
+  
+  // Commission specific
+  transactionVolumeY1?: number;
+  transactionVolumeY2?: number;
+  transactionVolumeY3?: number;
+  commissionRate?: number;
 }
 
 interface RevenueStreamsProps {
@@ -40,6 +65,7 @@ interface RevenueStreamsProps {
 const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industry }) => {
   const getEmptyStream = (): RevenueStream => ({
     name: '',
+    type: 'saas',
     year1: 0,
     year2: 0,
     year3: 0,
@@ -55,7 +81,22 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
     endingMonthlyOrdersY2: 0,
     endingMonthlyOrdersY3: 0,
     startingAOV: 0,
-    aovIncreaseRate: 0
+    aovIncreaseRate: 0,
+    monthlyImpressions: 0,
+    cpmRate: 0,
+    impressionGrowthRate: 0,
+    unitsSoldY1: 0,
+    unitsSoldY2: 0,
+    unitsSoldY3: 0,
+    pricePerUnit: 0,
+    billableHoursY1: 0,
+    billableHoursY2: 0,
+    billableHoursY3: 0,
+    hourlyRate: 0,
+    transactionVolumeY1: 0,
+    transactionVolumeY2: 0,
+    transactionVolumeY3: 0,
+    commissionRate: 0
   });
 
   const [newStream, setNewStream] = useState<RevenueStream>(getEmptyStream());
@@ -63,46 +104,70 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
   const calculateRevenue = (stream: RevenueStream): RevenueStream => {
     let updatedStream = { ...stream };
     
-    if (industry === 'saas' && stream.startingClients && stream.startingRevenuePerClient) {
-      // Calculate revenue per client with price increases
-      const revenuePerClientY1 = (stream.startingRevenuePerClient || 0) * (1 + (stream.priceIncreaseRate || 0) / 100);
-      const revenuePerClientY2 = revenuePerClientY1 * (1 + (stream.priceIncreaseRate || 0) / 100);
-      const revenuePerClientY3 = revenuePerClientY2 * (1 + (stream.priceIncreaseRate || 0) / 100);
-      
-      // Calculate average clients for each year
-      const avgClientsY1 = ((stream.startingClients || 0) + (stream.endingClientsY1 || 0)) / 2;
-      const avgClientsY2 = ((stream.endingClientsY1 || 0) + (stream.endingClientsY2 || 0)) / 2;
-      const avgClientsY3 = ((stream.endingClientsY2 || 0) + (stream.endingClientsY3 || 0)) / 2;
-      
-      // Calculate yearly revenue
-      updatedStream.year1 = avgClientsY1 * revenuePerClientY1 * 12;
-      updatedStream.year2 = avgClientsY2 * revenuePerClientY2 * 12;
-      updatedStream.year3 = avgClientsY3 * revenuePerClientY3 * 12;
-      
-      // Calculate YoY growth rate
-      if (updatedStream.year1 > 0 && updatedStream.year2 > 0) {
-        updatedStream.growthRate = ((updatedStream.year2 - updatedStream.year1) / updatedStream.year1) * 100;
-      }
-    } else if (industry === 'ecommerce' && stream.startingMonthlyOrders && stream.startingAOV) {
-      // Calculate AOV with increases
-      const aovY1 = (stream.startingAOV || 0) * (1 + (stream.aovIncreaseRate || 0) / 100);
-      const aovY2 = aovY1 * (1 + (stream.aovIncreaseRate || 0) / 100);
-      const aovY3 = aovY2 * (1 + (stream.aovIncreaseRate || 0) / 100);
-      
-      // Calculate average orders for each year
-      const avgOrdersY1 = ((stream.startingMonthlyOrders || 0) + (stream.endingMonthlyOrdersY1 || 0)) / 2;
-      const avgOrdersY2 = ((stream.endingMonthlyOrdersY1 || 0) + (stream.endingMonthlyOrdersY2 || 0)) / 2;
-      const avgOrdersY3 = ((stream.endingMonthlyOrdersY2 || 0) + (stream.endingMonthlyOrdersY3 || 0)) / 2;
-      
-      // Calculate yearly revenue
-      updatedStream.year1 = avgOrdersY1 * aovY1 * 12;
-      updatedStream.year2 = avgOrdersY2 * aovY2 * 12;
-      updatedStream.year3 = avgOrdersY3 * aovY3 * 12;
-      
-      // Calculate YoY growth rate
-      if (updatedStream.year1 > 0 && updatedStream.year2 > 0) {
-        updatedStream.growthRate = ((updatedStream.year2 - updatedStream.year1) / updatedStream.year1) * 100;
-      }
+    switch (stream.type) {
+      case 'saas':
+        if (stream.startingClients && stream.startingRevenuePerClient) {
+          const revenuePerClientY1 = (stream.startingRevenuePerClient || 0) * (1 + (stream.priceIncreaseRate || 0) / 100);
+          const revenuePerClientY2 = revenuePerClientY1 * (1 + (stream.priceIncreaseRate || 0) / 100);
+          const revenuePerClientY3 = revenuePerClientY2 * (1 + (stream.priceIncreaseRate || 0) / 100);
+          
+          const avgClientsY1 = ((stream.startingClients || 0) + (stream.endingClientsY1 || 0)) / 2;
+          const avgClientsY2 = ((stream.endingClientsY1 || 0) + (stream.endingClientsY2 || 0)) / 2;
+          const avgClientsY3 = ((stream.endingClientsY2 || 0) + (stream.endingClientsY3 || 0)) / 2;
+          
+          updatedStream.year1 = avgClientsY1 * revenuePerClientY1 * 12;
+          updatedStream.year2 = avgClientsY2 * revenuePerClientY2 * 12;
+          updatedStream.year3 = avgClientsY3 * revenuePerClientY3 * 12;
+        }
+        break;
+        
+      case 'ecommerce':
+        if (stream.startingMonthlyOrders && stream.startingAOV) {
+          const aovY1 = (stream.startingAOV || 0) * (1 + (stream.aovIncreaseRate || 0) / 100);
+          const aovY2 = aovY1 * (1 + (stream.aovIncreaseRate || 0) / 100);
+          const aovY3 = aovY2 * (1 + (stream.aovIncreaseRate || 0) / 100);
+          
+          const avgOrdersY1 = ((stream.startingMonthlyOrders || 0) + (stream.endingMonthlyOrdersY1 || 0)) / 2;
+          const avgOrdersY2 = ((stream.endingMonthlyOrdersY1 || 0) + (stream.endingMonthlyOrdersY2 || 0)) / 2;
+          const avgOrdersY3 = ((stream.endingMonthlyOrdersY2 || 0) + (stream.endingMonthlyOrdersY3 || 0)) / 2;
+          
+          updatedStream.year1 = avgOrdersY1 * aovY1 * 12;
+          updatedStream.year2 = avgOrdersY2 * aovY2 * 12;
+          updatedStream.year3 = avgOrdersY3 * aovY3 * 12;
+        }
+        break;
+        
+      case 'advertising':
+        if (stream.monthlyImpressions && stream.cpmRate) {
+          const baseRevenue = (stream.monthlyImpressions || 0) * (stream.cpmRate || 0) / 1000 * 12;
+          updatedStream.year1 = baseRevenue;
+          updatedStream.year2 = baseRevenue * (1 + (stream.impressionGrowthRate || 0) / 100);
+          updatedStream.year3 = updatedStream.year2 * (1 + (stream.impressionGrowthRate || 0) / 100);
+        }
+        break;
+        
+      case 'one-time':
+        updatedStream.year1 = (stream.unitsSoldY1 || 0) * (stream.pricePerUnit || 0);
+        updatedStream.year2 = (stream.unitsSoldY2 || 0) * (stream.pricePerUnit || 0);
+        updatedStream.year3 = (stream.unitsSoldY3 || 0) * (stream.pricePerUnit || 0);
+        break;
+        
+      case 'consulting':
+        updatedStream.year1 = (stream.billableHoursY1 || 0) * (stream.hourlyRate || 0);
+        updatedStream.year2 = (stream.billableHoursY2 || 0) * (stream.hourlyRate || 0);
+        updatedStream.year3 = (stream.billableHoursY3 || 0) * (stream.hourlyRate || 0);
+        break;
+        
+      case 'commission':
+        updatedStream.year1 = (stream.transactionVolumeY1 || 0) * (stream.commissionRate || 0) / 100;
+        updatedStream.year2 = (stream.transactionVolumeY2 || 0) * (stream.commissionRate || 0) / 100;
+        updatedStream.year3 = (stream.transactionVolumeY3 || 0) * (stream.commissionRate || 0) / 100;
+        break;
+    }
+    
+    // Calculate YoY growth rate
+    if (updatedStream.year1 > 0 && updatedStream.year2 > 0) {
+      updatedStream.growthRate = ((updatedStream.year2 - updatedStream.year1) / updatedStream.year1) * 100;
     }
     
     return updatedStream;
@@ -269,6 +334,173 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
     </div>
   );
 
+  const renderAdvertisingFields = () => (
+    <div className="space-y-4">
+      <h4 className="font-medium mb-3 text-slate-700">Advertising Revenue</h4>
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <Label>Monthly Impressions</Label>
+          <Input
+            type="number"
+            placeholder="1000000"
+            value={newStream.monthlyImpressions || ''}
+            onChange={(e) => setNewStream({ ...newStream, monthlyImpressions: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>CPM Rate ($)</Label>
+          <Input
+            type="number"
+            placeholder="2.50"
+            value={newStream.cpmRate || ''}
+            onChange={(e) => setNewStream({ ...newStream, cpmRate: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Yearly Growth (%)</Label>
+          <Input
+            type="number"
+            placeholder="25"
+            value={newStream.impressionGrowthRate || ''}
+            onChange={(e) => setNewStream({ ...newStream, impressionGrowthRate: Number(e.target.value) })}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderOneTimeFields = () => (
+    <div className="space-y-4">
+      <h4 className="font-medium mb-3 text-slate-700">One-time Sales</h4>
+      <div className="grid grid-cols-4 gap-4">
+        <div>
+          <Label>Price per Unit ($)</Label>
+          <Input
+            type="number"
+            placeholder="299"
+            value={newStream.pricePerUnit || ''}
+            onChange={(e) => setNewStream({ ...newStream, pricePerUnit: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Units Sold Year 1</Label>
+          <Input
+            type="number"
+            placeholder="100"
+            value={newStream.unitsSoldY1 || ''}
+            onChange={(e) => setNewStream({ ...newStream, unitsSoldY1: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Units Sold Year 2</Label>
+          <Input
+            type="number"
+            placeholder="250"
+            value={newStream.unitsSoldY2 || ''}
+            onChange={(e) => setNewStream({ ...newStream, unitsSoldY2: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Units Sold Year 3</Label>
+          <Input
+            type="number"
+            placeholder="500"
+            value={newStream.unitsSoldY3 || ''}
+            onChange={(e) => setNewStream({ ...newStream, unitsSoldY3: Number(e.target.value) })}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderConsultingFields = () => (
+    <div className="space-y-4">
+      <h4 className="font-medium mb-3 text-slate-700">Consulting/Services</h4>
+      <div className="grid grid-cols-4 gap-4">
+        <div>
+          <Label>Hourly Rate ($)</Label>
+          <Input
+            type="number"
+            placeholder="150"
+            value={newStream.hourlyRate || ''}
+            onChange={(e) => setNewStream({ ...newStream, hourlyRate: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Billable Hours Year 1</Label>
+          <Input
+            type="number"
+            placeholder="800"
+            value={newStream.billableHoursY1 || ''}
+            onChange={(e) => setNewStream({ ...newStream, billableHoursY1: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Billable Hours Year 2</Label>
+          <Input
+            type="number"
+            placeholder="1200"
+            value={newStream.billableHoursY2 || ''}
+            onChange={(e) => setNewStream({ ...newStream, billableHoursY2: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Billable Hours Year 3</Label>
+          <Input
+            type="number"
+            placeholder="1600"
+            value={newStream.billableHoursY3 || ''}
+            onChange={(e) => setNewStream({ ...newStream, billableHoursY3: Number(e.target.value) })}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCommissionFields = () => (
+    <div className="space-y-4">
+      <h4 className="font-medium mb-3 text-slate-700">Commission/Marketplace</h4>
+      <div className="grid grid-cols-4 gap-4">
+        <div>
+          <Label>Commission Rate (%)</Label>
+          <Input
+            type="number"
+            placeholder="5"
+            value={newStream.commissionRate || ''}
+            onChange={(e) => setNewStream({ ...newStream, commissionRate: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Transaction Volume Year 1 ($)</Label>
+          <Input
+            type="number"
+            placeholder="100000"
+            value={newStream.transactionVolumeY1 || ''}
+            onChange={(e) => setNewStream({ ...newStream, transactionVolumeY1: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Transaction Volume Year 2 ($)</Label>
+          <Input
+            type="number"
+            placeholder="300000"
+            value={newStream.transactionVolumeY2 || ''}
+            onChange={(e) => setNewStream({ ...newStream, transactionVolumeY2: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Transaction Volume Year 3 ($)</Label>
+          <Input
+            type="number"
+            placeholder="750000"
+            value={newStream.transactionVolumeY3 || ''}
+            onChange={(e) => setNewStream({ ...newStream, transactionVolumeY3: Number(e.target.value) })}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
   const removeRevenueStream = (index: number) => {
     const updatedData = data.filter((_, i) => i !== index);
     onChange(updatedData);
@@ -298,19 +530,41 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
         <CardContent>
           <div className="space-y-4">
             {/* Basic Stream Info */}
-            <div>
-              <Label htmlFor="stream-name">Stream Name</Label>
-              <Input
-                id="stream-name"
-                placeholder={industry === 'saas' ? 'e.g., Monthly Subscriptions' : 'e.g., Product Sales'}
-                value={newStream.name}
-                onChange={(e) => setNewStream({ ...newStream, name: e.target.value })}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="stream-name">Stream Name</Label>
+                <Input
+                  id="stream-name"
+                  placeholder="e.g., Monthly Subscriptions"
+                  value={newStream.name}
+                  onChange={(e) => setNewStream({ ...newStream, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="stream-type">Revenue Stream Type</Label>
+                <Select value={newStream.type} onValueChange={(value: any) => setNewStream({ ...newStream, type: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select revenue type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="saas">SaaS (Subscription)</SelectItem>
+                    <SelectItem value="ecommerce">E-commerce</SelectItem>
+                    <SelectItem value="advertising">Advertising Revenue</SelectItem>
+                    <SelectItem value="one-time">One-time Sales</SelectItem>
+                    <SelectItem value="consulting">Consulting/Services</SelectItem>
+                    <SelectItem value="commission">Commission/Marketplace</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Industry-specific fields */}
-            {industry === 'saas' && renderSaaSFields()}
-            {industry === 'ecommerce' && renderECommerceFields()}
+            {/* Type-specific fields */}
+            {newStream.type === 'saas' && renderSaaSFields()}
+            {newStream.type === 'ecommerce' && renderECommerceFields()}
+            {newStream.type === 'advertising' && renderAdvertisingFields()}
+            {newStream.type === 'one-time' && renderOneTimeFields()}
+            {newStream.type === 'consulting' && renderConsultingFields()}
+            {newStream.type === 'commission' && renderCommissionFields()}
 
             {/* Show calculated revenue projections with chart */}
             {(calculateRevenue(newStream).year1 > 0 || calculateRevenue(newStream).year2 > 0 || calculateRevenue(newStream).year3 > 0) && (

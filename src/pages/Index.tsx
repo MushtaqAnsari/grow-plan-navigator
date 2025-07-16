@@ -15,6 +15,7 @@ import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target } from "luci
 export interface FinancialData {
   revenueStreams: {
     name: string;
+    type: 'saas' | 'ecommerce' | 'advertising' | 'one-time' | 'consulting' | 'commission' | 'freemium';
     year1: number;
     year2: number;
     year3: number;
