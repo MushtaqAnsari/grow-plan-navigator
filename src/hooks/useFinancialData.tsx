@@ -306,10 +306,13 @@ export const useFinancialData = (userId: string | undefined) => {
     try {
       // Save revenue streams
       // Always delete existing streams first to handle removals
-      await supabase
+      const res = await supabase
         .from('revenue_streams')
         .delete()
         .eq('financial_model_id', currentModelId);
+
+      
+      console.log(currentModelId, res)
 
       if (data.revenueStreams.length > 0) {
         // Insert new streams
@@ -317,10 +320,10 @@ export const useFinancialData = (userId: string | undefined) => {
           .from('revenue_streams')
           .insert({
               financial_model_id: currentModelId,
-              name: data.revenueStreams[0].name,
-              year1: data.revenueStreams[0].year1,
-              year2: data.revenueStreams[0].year2,
-              year3: data.revenueStreams[0].year3
+              name: data.revenueStreams[data.revenueStreams.length - 1].name,
+              year1: data.revenueStreams[data.revenueStreams.length - 1].year1,
+              year2: data.revenueStreams[data.revenueStreams.length - 1].year2,
+              year3: data.revenueStreams[data.revenueStreams.length - 1].year3
             });
       }
 
