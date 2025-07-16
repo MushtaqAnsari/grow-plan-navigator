@@ -33,7 +33,14 @@ export interface FinancialData {
       };
     };
     team: {
-      salaries: { year1: number; year2: number; year3: number; };
+      employees: {
+        id: string;
+        name: string;
+        designation: string;
+        department: 'technology' | 'sales' | 'marketing' | 'operations' | 'hr' | 'finance' | 'other';
+        salary: number;
+        isCapitalized?: boolean;
+      }[];
       benefits: { year1: number; year2: number; year3: number; };
       contractors: { year1: number; year2: number; year3: number; };
       training: { year1: number; year2: number; year3: number; };
@@ -65,10 +72,12 @@ export interface FinancialData {
     };
   };
   employees: {
-    role: string;
-    count: number;
+    id: string;
+    name: string;
+    designation: string;
+    department: 'technology' | 'sales' | 'marketing' | 'operations' | 'hr' | 'finance' | 'other';
     salary: number;
-    year: number;
+    isCapitalized?: boolean; // For technology department
   }[];
   funding: {
     totalFunding: number;
@@ -88,7 +97,7 @@ const Index = () => {
     costs: {
       revenueStreamCosts: {},
       team: {
-        salaries: { year1: 0, year2: 0, year3: 0 },
+        employees: [],
         benefits: { year1: 0, year2: 0, year3: 0 },
         contractors: { year1: 0, year2: 0, year3: 0 },
         training: { year1: 0, year2: 0, year3: 0 },

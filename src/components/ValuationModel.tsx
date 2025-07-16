@@ -38,9 +38,8 @@ const ValuationModel: React.FC<ValuationModelProps> = ({ data }) => {
   };
 
   const calculatePayroll = (year: number) => {
-    return data.employees
-      .filter(emp => emp.year <= year)
-      .reduce((sum, emp) => sum + (emp.count * emp.salary), 0);
+    return data.costs.team.employees
+      .reduce((sum, emp) => sum + emp.salary, 0);
   };
 
   // Calculate key metrics for valuation

@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { FinancialData } from "@/pages/Index";
+import { Plus, Trash2, BarChart3 } from "lucide-react";
 
 interface OperationalExpensesProps {
   data: {
@@ -21,8 +25,72 @@ interface OperationalExpensesProps {
 }
 
 const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChange, revenueStreams }) => {
+  const [showDepartmentReport, setShowDepartmentReport] = useState(false);
+
+  // Employee management functions
+  const addEmployee = () => {
+    const newEmployee = {
+      id: Date.now().toString(),
+      name: '',
+      designation: '',
+      department: 'other' as const,
+      salary: 0,
+      isCapitalized: false
+    };
+    
+    onChange({
+      ...data,
+      team: {
+        ...data.team,
+        employees: [...data.team.employees, newEmployee]
+      }
+    });
+  };
+
+  const updateEmployee = (id: string, field: string, value: any) => {
+    onChange({
+      ...data,
+      team: {
+        ...data.team,
+        employees: data.team.employees.map(emp => 
+          emp.id === id ? { ...emp, [field]: value } : emp
+        )
+      }
+    });
+  };
+
+  const removeEmployee = (id: string) => {
+    onChange({
+      ...data,
+      team: {
+        ...data.team,
+        employees: data.team.employees.filter(emp => emp.id !== id)
+      }
+    });
+  };
+
+  // Department report calculations
+  const getDepartmentReport = () => {
+    const departments: { [key: string]: { count: number; totalSalary: number; avgSalary: number; employees: any[] } } = {};
+    
+    data.team.employees.forEach(emp => {
+      if (!departments[emp.department]) {
+        departments[emp.department] = { count: 0, totalSalary: 0, avgSalary: 0, employees: [] };
+      }
+      departments[emp.department].count++;
+      departments[emp.department].totalSalary += emp.salary;
+      departments[emp.department].employees.push(emp);
+    });
+
+    Object.keys(departments).forEach(dept => {
+      departments[dept].avgSalary = departments[dept].totalSalary / departments[dept].count;
+    });
+
+    return departments;
+  };
+
   const updateTeamCost = (
-    category: keyof FinancialData['costs']['team'], 
+    category: keyof Omit<FinancialData['costs']['team'], 'employees'>, 
     year: 'year1' | 'year2' | 'year3', 
     value: number
   ) => {
@@ -104,11 +172,10 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   };
 
   const teamCategories = [
-    { key: 'salaries' as keyof FinancialData['costs']['team'], label: 'Employee Salaries', color: 'border-blue-500' },
-    { key: 'benefits' as keyof FinancialData['costs']['team'], label: 'Benefits & Healthcare', color: 'border-green-500' },
-    { key: 'contractors' as keyof FinancialData['costs']['team'], label: 'Contractors & Freelancers', color: 'border-purple-500' },
-    { key: 'training' as keyof FinancialData['costs']['team'], label: 'Training & Development', color: 'border-orange-500' },
-    { key: 'recruitment' as keyof FinancialData['costs']['team'], label: 'Recruitment Costs', color: 'border-red-500' }
+    { key: 'benefits' as keyof Omit<FinancialData['costs']['team'], 'employees'>, label: 'Benefits & Healthcare', color: 'border-green-500' },
+    { key: 'contractors' as keyof Omit<FinancialData['costs']['team'], 'employees'>, label: 'Contractors & Freelancers', color: 'border-purple-500' },
+    { key: 'training' as keyof Omit<FinancialData['costs']['team'], 'employees'>, label: 'Training & Development', color: 'border-orange-500' },
+    { key: 'recruitment' as keyof Omit<FinancialData['costs']['team'], 'employees'>, label: 'Recruitment Costs', color: 'border-red-500' }
   ];
 
   const adminCategories = [
@@ -134,6 +201,16 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     { key: 'other' as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue'>, label: 'Other Marketing Expenses', color: 'border-gray-500' }
   ];
 
+  const departmentOptions = [
+    { value: 'technology', label: 'Technology' },
+    { value: 'sales', label: 'Sales' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'operations', label: 'Operations' },
+    { value: 'hr', label: 'Human Resources' },
+    { value: 'finance', label: 'Finance' },
+    { value: 'other', label: 'Other' }
+  ];
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="team" className="w-full">
@@ -144,6 +221,125 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
         </TabsList>
 
         <TabsContent value="team" className="space-y-6">
+          {/* Employee Management Section */}
+          <Card className="border-l-4 border-l-blue-500">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Employee Management</CardTitle>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowDepartmentReport(!showDepartmentReport)} variant="outline" size="sm">
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Department Report
+                </Button>
+                <Button onClick={addEmployee} size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Employee
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {data.team.employees.map((employee) => (
+                <div key={employee.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-lg">
+                  <div>
+                    <Label className="text-xs text-gray-500">Name</Label>
+                    <Input
+                      placeholder="Employee Name"
+                      value={employee.name}
+                      onChange={(e) => updateEmployee(employee.id, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Designation</Label>
+                    <Input
+                      placeholder="Job Title"
+                      value={employee.designation}
+                      onChange={(e) => updateEmployee(employee.id, 'designation', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Department</Label>
+                    <Select value={employee.department} onValueChange={(value) => updateEmployee(employee.id, 'department', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departmentOptions.map(dept => (
+                          <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Annual Salary ($)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={employee.salary || ''}
+                      onChange={(e) => updateEmployee(employee.id, 'salary', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="flex flex-col justify-center">
+                    {employee.department === 'technology' && (
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={employee.isCapitalized || false}
+                          onCheckedChange={(checked) => updateEmployee(employee.id, 'isCapitalized', checked)}
+                        />
+                        <Label className="text-xs">Capitalize as IP</Label>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center">
+                    <Button
+                      onClick={() => removeEmployee(employee.id)}
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              
+              {data.team.employees.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No employees added yet. Click "Add Employee" to start building your team.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Department Report */}
+          {showDepartmentReport && (
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader>
+                <CardTitle className="text-lg">Department Payroll Report</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(getDepartmentReport()).map(([dept, data]) => (
+                    <div key={dept} className="p-4 border rounded-lg">
+                      <h4 className="font-medium capitalize text-sm text-gray-700">{dept}</h4>
+                      <div className="mt-2 space-y-1 text-xs">
+                        <p>Employees: {data.count}</p>
+                        <p>Total Salary: ${data.totalSalary.toLocaleString()}</p>
+                        <p>Avg Salary: ${Math.round(data.avgSalary).toLocaleString()}</p>
+                      </div>
+                      <div className="mt-2">
+                        {data.employees.map(emp => (
+                          <Badge key={emp.id} variant="outline" className="mr-1 mb-1 text-xs">
+                            {emp.name || 'Unnamed'} {emp.isCapitalized && '(IP)'}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Other Team Costs */}
           {teamCategories.map(({ key, label, color }) => (
             <Card key={key} className={`border-l-4 ${color}`}>
               <CardHeader>
@@ -295,7 +491,7 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
 
           <div className="text-sm text-gray-600 mb-4">
             <p className="font-medium">Marketing Budget Breakdown:</p>
-            <p>Allocate your marketing budget across different channels below.</p>
+            <p>Allocate your marketing budget across different channels below. Total allocations should not exceed your budget.</p>
           </div>
 
           {marketingCategories.map(({ key, label, color }) => (
