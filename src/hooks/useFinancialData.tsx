@@ -250,6 +250,8 @@ export const useFinancialData = (userId: string | undefined) => {
           interestRate: loan.interest_rate || 0,
           termMonths: (loan.term_years || 0) * 12,
           startYear: 'year1' as const,
+          paymentFrequency: 'monthly' as const,
+          gracePeriodMonths: 0,
           isInterestOnly: false
         }));
       }

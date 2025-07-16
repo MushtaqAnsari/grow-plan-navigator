@@ -18,6 +18,8 @@ interface Loan {
   interestRate: number;
   termMonths: number;
   startYear: 'year1' | 'year2' | 'year3';
+  paymentFrequency: 'monthly' | 'quarterly' | 'annually';
+  gracePeriodMonths: number;
   isInterestOnly?: boolean;
   conversionDetails?: {
     discountRate: number;
@@ -66,10 +68,39 @@ const LoansAndFinancing: React.FC<LoansAndFinancingProps> = ({ data, onChange, f
     return grossProfit - operationalExpenses;
   };
 
-  const calculateNetProfit = (year: 'year1' | 'year2' | 'year3') => {
-    const ebitda = calculateEBITDA(year);
-    const interestExpense = data.totalInterestExpense[year];
-    return ebitda - interestExpense;
+  const calculatePaymentAmount = (loan: Loan): number => {
+    if (loan.isInterestOnly) {
+      return loan.principalAmount * (loan.interestRate / 100) / (loan.paymentFrequency === 'monthly' ? 12 : loan.paymentFrequency === 'quarterly' ? 4 : 1);
+    }
+    
+    const periodsPerYear = loan.paymentFrequency === 'monthly' ? 12 : loan.paymentFrequency === 'quarterly' ? 4 : 1;
+    const totalPayments = loan.termMonths / (12 / periodsPerYear);
+    const periodicRate = loan.interestRate / 100 / periodsPerYear;
+    
+    if (periodicRate === 0) return loan.principalAmount / totalPayments;
+    
+    return loan.principalAmount * (periodicRate * Math.pow(1 + periodicRate, totalPayments)) / (Math.pow(1 + periodicRate, totalPayments) - 1);
+  };
+
+  const calculateTotalPayments = (loan: Loan, year: 'year1' | 'year2' | 'year3'): number => {
+    const yearNum = parseInt(year.replace('year', ''));
+    const startYearNum = parseInt(loan.startYear.replace('year', ''));
+    
+    if (yearNum < startYearNum) return 0;
+    
+    const paymentAmount = calculatePaymentAmount(loan);
+    const periodsPerYear = loan.paymentFrequency === 'monthly' ? 12 : loan.paymentFrequency === 'quarterly' ? 4 : 1;
+    
+    // Account for grace period
+    const effectiveStartMonth = (startYearNum - 1) * 12 + loan.gracePeriodMonths;
+    const yearStartMonth = (yearNum - 1) * 12;
+    const yearEndMonth = yearNum * 12;
+    
+    if (effectiveStartMonth >= yearEndMonth) return 0;
+    
+    const paymentsInYear = Math.min(periodsPerYear, Math.max(0, (yearEndMonth - Math.max(effectiveStartMonth, yearStartMonth)) / (12 / periodsPerYear)));
+    
+    return paymentAmount * paymentsInYear;
   };
 
   const addLoan = () => {
@@ -81,6 +112,8 @@ const LoansAndFinancing: React.FC<LoansAndFinancingProps> = ({ data, onChange, f
       interestRate: 0,
       termMonths: 12,
       startYear: 'year1',
+      paymentFrequency: 'monthly',
+      gracePeriodMonths: 0,
       isInterestOnly: false,
       ...(selectedLoanType === 'convertible-note' && {
         conversionDetails: {
@@ -158,14 +191,13 @@ const LoansAndFinancing: React.FC<LoansAndFinancingProps> = ({ data, onChange, f
     });
   };
 
-  // Chart data
-  const profitabilityData = [1, 2, 3].map(year => {
+  // Interest Expense data for chart
+  const interestExpenseData = [1, 2, 3].map(year => {
     const yearKey = `year${year}` as 'year1' | 'year2' | 'year3';
     return {
       year: `Year ${year}`,
-      ebitda: calculateEBITDA(yearKey),
       interestExpense: data.totalInterestExpense[yearKey],
-      netProfit: calculateNetProfit(yearKey)
+      totalPayments: data.loans.reduce((sum, loan) => sum + calculateTotalPayments(loan, yearKey), 0)
     };
   });
 
@@ -224,7 +256,7 @@ const LoansAndFinancing: React.FC<LoansAndFinancingProps> = ({ data, onChange, f
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                   <div>
                     <Label className="text-xs text-gray-500">Principal Amount ($)</Label>
                     <Input
@@ -265,6 +297,28 @@ const LoansAndFinancing: React.FC<LoansAndFinancingProps> = ({ data, onChange, f
                         <SelectItem value="year3">Year 3</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Payment Frequency</Label>
+                    <Select value={loan.paymentFrequency} onValueChange={(value) => updateLoan(loan.id, 'paymentFrequency', value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="quarterly">Quarterly</SelectItem>
+                        <SelectItem value="annually">Annually</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Grace Period (Months)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={loan.gracePeriodMonths || ''}
+                      onChange={(e) => updateLoan(loan.id, 'gracePeriodMonths', Number(e.target.value))}
+                    />
                   </div>
                 </div>
 
@@ -312,12 +366,33 @@ const LoansAndFinancing: React.FC<LoansAndFinancingProps> = ({ data, onChange, f
                   </div>
                 )}
 
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <h5 className="font-medium mb-2">Annual Interest Expense</h5>
-                  <div className="flex gap-4 text-sm">
-                    <span>Year 1: ${calculateLoanInterest(loan, 'year1').toLocaleString()}</span>
-                    <span>Year 2: ${calculateLoanInterest(loan, 'year2').toLocaleString()}</span>
-                    <span>Year 3: ${calculateLoanInterest(loan, 'year3').toLocaleString()}</span>
+                <div className="bg-gray-50 p-3 rounded-lg space-y-3">
+                  <div>
+                    <h5 className="font-medium mb-2">Payment Details</h5>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Payment Frequency:</span>
+                        <span className="ml-2 font-medium capitalize">{loan.paymentFrequency}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Payment Amount:</span>
+                        <span className="ml-2 font-medium">${calculatePaymentAmount(loan).toLocaleString()}</span>
+                      </div>
+                      {loan.gracePeriodMonths > 0 && (
+                        <div>
+                          <span className="text-gray-600">Grace Period:</span>
+                          <span className="ml-2 font-medium">{loan.gracePeriodMonths} months</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h5 className="font-medium mb-2">Annual Interest Expense</h5>
+                    <div className="flex gap-4 text-sm">
+                      <span>Year 1: ${calculateLoanInterest(loan, 'year1').toLocaleString()}</span>
+                      <span>Year 2: ${calculateLoanInterest(loan, 'year2').toLocaleString()}</span>
+                      <span>Year 3: ${calculateLoanInterest(loan, 'year3').toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -326,36 +401,33 @@ const LoansAndFinancing: React.FC<LoansAndFinancingProps> = ({ data, onChange, f
         </CardContent>
       </Card>
 
-      {/* Net Profit Summary */}
+      {/* Interest Expense Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[1, 2, 3].map(year => {
           const yearKey = `year${year}` as 'year1' | 'year2' | 'year3';
-          const ebitda = calculateEBITDA(yearKey);
           const interestExpense = data.totalInterestExpense[yearKey];
-          const netProfit = calculateNetProfit(yearKey);
-          const isPositive = netProfit >= 0;
+          const totalPayments = data.loans.reduce((sum, loan) => sum + calculateTotalPayments(loan, yearKey), 0);
+          const principalPayments = totalPayments - interestExpense;
           
           return (
-            <Card key={year} className={`border-l-4 ${isPositive ? 'border-l-green-500' : 'border-l-red-500'}`}>
+            <Card key={year} className="border-l-4 border-l-red-500">
               <CardHeader>
-                <CardTitle className="text-lg">Year {year} Net Profit</CardTitle>
+                <CardTitle className="text-lg">Year {year} Payment Summary</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">EBITDA:</span>
-                    <span className="font-medium">${ebitda.toLocaleString()}</span>
+                    <span className="text-sm text-gray-600">Interest Expense:</span>
+                    <span className="font-medium text-red-600">${interestExpense.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Interest Expense:</span>
-                    <span className="font-medium text-red-600">-${interestExpense.toLocaleString()}</span>
+                    <span className="text-sm text-gray-600">Principal Payments:</span>
+                    <span className="font-medium text-blue-600">${principalPayments.toLocaleString()}</span>
                   </div>
                   <hr className="my-2" />
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Net Profit:</span>
-                    <span className={`font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                      ${netProfit.toLocaleString()}
-                    </span>
+                    <span className="text-sm text-gray-600">Total Loan Payments:</span>
+                    <span className="font-bold text-gray-900">${totalPayments.toLocaleString()}</span>
                   </div>
                 </div>
               </CardContent>
@@ -364,22 +436,21 @@ const LoansAndFinancing: React.FC<LoansAndFinancingProps> = ({ data, onChange, f
         })}
       </div>
 
-      {/* Profitability Chart */}
+      {/* Interest Expense Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Profitability Analysis</CardTitle>
+          <CardTitle>Loan Payment Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={profitabilityData}>
+              <BarChart data={interestExpenseData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" />
                 <YAxis />
                 <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
-                <Bar dataKey="ebitda" fill="#3b82f6" name="EBITDA" />
                 <Bar dataKey="interestExpense" fill="#ef4444" name="Interest Expense" />
-                <Bar dataKey="netProfit" fill="#22c55e" name="Net Profit" />
+                <Bar dataKey="totalPayments" fill="#3b82f6" name="Total Payments" />
               </BarChart>
             </ResponsiveContainer>
           </div>

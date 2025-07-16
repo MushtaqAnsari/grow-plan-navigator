@@ -144,6 +144,8 @@ export interface FinancialData {
       interestRate: number;
       termMonths: number;
       startYear: 'year1' | 'year2' | 'year3';
+      paymentFrequency: 'monthly' | 'quarterly' | 'annually';
+      gracePeriodMonths: number;
       isInterestOnly?: boolean;
       conversionDetails?: {
         discountRate: number;
