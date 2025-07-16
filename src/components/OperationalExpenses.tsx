@@ -22,9 +22,10 @@ interface OperationalExpensesProps {
     marketing: FinancialData['costs']['marketing'];
   }) => void;
   revenueStreams: FinancialData['revenueStreams'];
+  balanceSheetData: FinancialData['costs']['balanceSheet'];
 }
 
-const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChange, revenueStreams }) => {
+const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChange, revenueStreams, balanceSheetData }) => {
   const [showDepartmentReport, setShowDepartmentReport] = useState(false);
 
   // Employee management functions
@@ -213,6 +214,69 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     return departments;
   };
 
+  // Software item management
+  const addSoftwareItem = () => {
+    const newItem = {
+      id: Date.now().toString(),
+      name: '',
+      department: 'other' as const,
+      costType: 'monthly' as const,
+      amount: 0
+    };
+    
+    onChange({
+      ...data,
+      admin: {
+        ...data.admin,
+        software: {
+          ...data.admin.software,
+          items: [...data.admin.software.items, newItem]
+        }
+      }
+    });
+  };
+
+  const updateSoftwareItem = (id: string, field: string, value: any) => {
+    onChange({
+      ...data,
+      admin: {
+        ...data.admin,
+        software: {
+          ...data.admin.software,
+          items: data.admin.software.items.map(item => 
+            item.id === id ? { ...item, [field]: value } : item
+          )
+        }
+      }
+    });
+  };
+
+  const removeSoftwareItem = (id: string) => {
+    onChange({
+      ...data,
+      admin: {
+        ...data.admin,
+        software: {
+          ...data.admin.software,
+          items: data.admin.software.items.filter(item => item.id !== id)
+        }
+      }
+    });
+  };
+
+  const updateAdminField = (field: string, subField: string, value: number) => {
+    onChange({
+      ...data,
+      admin: {
+        ...data.admin,
+        [field]: {
+          ...data.admin[field as keyof typeof data.admin],
+          [subField]: value
+        }
+      }
+    });
+  };
+
   const updateAdminCost = (
     category: keyof FinancialData['costs']['admin'], 
     year: 'year1' | 'year2' | 'year3', 
@@ -228,6 +292,64 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
         }
       }
     });
+  };
+
+  // Calculate automatic values
+  const calculateRentAndUtilities = (year: 'year1' | 'year2' | 'year3') => {
+    const monthlyRent = data.admin.rent.monthlyAmount;
+    const annualRent = monthlyRent * 12;
+    const utilities = annualRent * (data.admin.rent.utilitiesPercentage / 100);
+    
+    // Update rent automatically
+    if (data.admin.rent[year] !== annualRent) {
+      updateAdminCost('rent', year, annualRent);
+    }
+    
+    return { annualRent, utilities };
+  };
+
+  const calculateTravelCosts = (year: 'year1' | 'year2' | 'year3') => {
+    const { tripsPerMonth, domesticCostPerTrip, internationalCostPerTrip, domesticTripsRatio } = data.admin.travel;
+    const totalTripsPerYear = tripsPerMonth * 12;
+    const domesticTrips = totalTripsPerYear * (domesticTripsRatio / 100);
+    const internationalTrips = totalTripsPerYear * ((100 - domesticTripsRatio) / 100);
+    const totalCost = (domesticTrips * domesticCostPerTrip) + (internationalTrips * internationalCostPerTrip);
+    
+    if (data.admin.travel[year] !== totalCost) {
+      updateAdminCost('travel', year, totalCost);
+    }
+    
+    return totalCost;
+  };
+
+  const calculateInsurance = (year: 'year1' | 'year2' | 'year3') => {
+    const fixedAssets = balanceSheetData.fixedAssets[year] || 0;
+    const insuranceCost = fixedAssets * (data.admin.insurance.percentageOfAssets / 100);
+    
+    if (data.admin.insurance[year] !== insuranceCost) {
+      updateAdminCost('insurance', year, insuranceCost);
+    }
+    
+    return insuranceCost;
+  };
+
+  const calculateSoftwareCosts = (year: 'year1' | 'year2' | 'year3') => {
+    const totalCost = data.admin.software.items.reduce((sum, item) => {
+      if (item.costType === 'monthly') {
+        return sum + (item.amount * 12);
+      } else if (item.costType === 'yearly') {
+        return sum + item.amount;
+      } else if (item.costType === 'one-time' && year === 'year1') {
+        return sum + item.amount;
+      }
+      return sum;
+    }, 0);
+    
+    if (data.admin.software[year] !== totalCost) {
+      updateAdminCost('software', year, totalCost);
+    }
+    
+    return totalCost;
   };
 
   const updateMarketingCost = (
@@ -279,15 +401,8 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   };
 
   const adminCategories = [
-    { key: 'rent' as keyof FinancialData['costs']['admin'], label: 'Office Rent (Monthly)', color: 'border-blue-500' },
-    { key: 'utilities' as keyof FinancialData['costs']['admin'], label: 'Utilities', color: 'border-green-500' },
-    { key: 'domesticTravel' as keyof FinancialData['costs']['admin'], label: 'Domestic Travel', color: 'border-purple-500' },
-    { key: 'internationalTravel' as keyof FinancialData['costs']['admin'], label: 'International Travel', color: 'border-orange-500' },
-    { key: 'insurance' as keyof FinancialData['costs']['admin'], label: 'Insurance', color: 'border-red-500' },
     { key: 'legal' as keyof FinancialData['costs']['admin'], label: 'Legal & Professional Services', color: 'border-yellow-500' },
     { key: 'accounting' as keyof FinancialData['costs']['admin'], label: 'Accounting & Bookkeeping', color: 'border-indigo-500' },
-    { key: 'software' as keyof FinancialData['costs']['admin'], label: 'Software & Subscriptions', color: 'border-pink-500' },
-    { key: 'equipment' as keyof FinancialData['costs']['admin'], label: 'Equipment & Hardware', color: 'border-gray-500' },
     { key: 'other' as keyof FinancialData['costs']['admin'], label: 'Other Admin Expenses', color: 'border-cyan-500' }
   ];
 
@@ -677,6 +792,226 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
         </TabsContent>
 
         <TabsContent value="admin" className="space-y-6">
+          {/* Rent & Utilities */}
+          <Card className="border-l-4 border-blue-500">
+            <CardHeader>
+              <CardTitle className="text-lg">Office Rent & Utilities</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Monthly Rent ($)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.admin.rent.monthlyAmount || ''}
+                    onChange={(e) => updateAdminField('rent', 'monthlyAmount', Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>Utilities (% of Rent)</Label>
+                  <Input
+                    type="number"
+                    placeholder="15"
+                    value={data.admin.rent.utilitiesPercentage || ''}
+                    onChange={(e) => updateAdminField('rent', 'utilitiesPercentage', Number(e.target.value))}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
+                {['year1', 'year2', 'year3'].map((year, index) => {
+                  const { annualRent, utilities } = calculateRentAndUtilities(year as 'year1' | 'year2' | 'year3');
+                  return (
+                    <div key={year} className="text-sm">
+                      <h4 className="font-medium">Year {index + 1}</h4>
+                      <p>Annual Rent: ${annualRent.toLocaleString()}</p>
+                      <p>Utilities: ${utilities.toLocaleString()}</p>
+                      <p className="font-semibold">Total: ${(annualRent + utilities).toLocaleString()}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Travel */}
+          <Card className="border-l-4 border-purple-500">
+            <CardHeader>
+              <CardTitle className="text-lg">Travel Expenses</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label>Trips per Month</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.admin.travel.tripsPerMonth || ''}
+                    onChange={(e) => updateAdminField('travel', 'tripsPerMonth', Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>Domestic Cost per Trip ($)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.admin.travel.domesticCostPerTrip || ''}
+                    onChange={(e) => updateAdminField('travel', 'domesticCostPerTrip', Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>International Cost per Trip ($)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={data.admin.travel.internationalCostPerTrip || ''}
+                    onChange={(e) => updateAdminField('travel', 'internationalCostPerTrip', Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label>Domestic Trips (%)</Label>
+                  <Input
+                    type="number"
+                    placeholder="70"
+                    value={data.admin.travel.domesticTripsRatio || ''}
+                    onChange={(e) => updateAdminField('travel', 'domesticTripsRatio', Number(e.target.value))}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
+                {['year1', 'year2', 'year3'].map((year, index) => {
+                  const totalCost = calculateTravelCosts(year as 'year1' | 'year2' | 'year3');
+                  return (
+                    <div key={year} className="text-sm">
+                      <h4 className="font-medium">Year {index + 1}</h4>
+                      <p className="font-semibold">Total: ${totalCost.toLocaleString()}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Insurance */}
+          <Card className="border-l-4 border-red-500">
+            <CardHeader>
+              <CardTitle className="text-lg">Insurance</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Insurance (% of Fixed Assets)</Label>
+                <Input
+                  type="number"
+                  placeholder="2"
+                  value={data.admin.insurance.percentageOfAssets || ''}
+                  onChange={(e) => updateAdminField('insurance', 'percentageOfAssets', Number(e.target.value))}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
+                {['year1', 'year2', 'year3'].map((year, index) => {
+                  const insuranceCost = calculateInsurance(year as 'year1' | 'year2' | 'year3');
+                  const fixedAssets = balanceSheetData.fixedAssets[year as 'year1' | 'year2' | 'year3'];
+                  return (
+                    <div key={year} className="text-sm">
+                      <h4 className="font-medium">Year {index + 1}</h4>
+                      <p>Fixed Assets: ${fixedAssets.toLocaleString()}</p>
+                      <p className="font-semibold">Insurance: ${insuranceCost.toLocaleString()}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Software & Subscriptions */}
+          <Card className="border-l-4 border-pink-500">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Software & Subscriptions</CardTitle>
+              <Button onClick={addSoftwareItem} size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Software
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {data.admin.software.items.map((item) => (
+                <div key={item.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border rounded-lg">
+                  <div>
+                    <Label className="text-xs text-gray-500">Software Name</Label>
+                    <Input
+                      placeholder="Software Name"
+                      value={item.name}
+                      onChange={(e) => updateSoftwareItem(item.id, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Department</Label>
+                    <Select value={item.department} onValueChange={(value) => updateSoftwareItem(item.id, 'department', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departmentOptions.map(dept => (
+                          <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Cost Type</Label>
+                    <Select value={item.costType} onValueChange={(value) => updateSoftwareItem(item.id, 'costType', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="one-time">One-time</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Amount ($)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={item.amount || ''}
+                      onChange={(e) => updateSoftwareItem(item.id, 'amount', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <Button
+                      onClick={() => removeSoftwareItem(item.id)}
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              
+              {data.admin.software.items.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No software items added yet. Click "Add Software" to start.
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
+                {['year1', 'year2', 'year3'].map((year, index) => {
+                  const totalCost = calculateSoftwareCosts(year as 'year1' | 'year2' | 'year3');
+                  return (
+                    <div key={year} className="text-sm">
+                      <h4 className="font-medium">Year {index + 1}</h4>
+                      <p className="font-semibold">Total: ${totalCost.toLocaleString()}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Other Admin Categories */}
           {adminCategories.map(({ key, label, color }) => (
             <Card key={key} className={`border-l-4 ${color}`}>
               <CardHeader>

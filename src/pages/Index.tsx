@@ -9,6 +9,7 @@ import GrossProfit from "@/components/GrossProfit";
 import OperationalExpenses from "@/components/OperationalExpenses";
 import EBITDA from "@/components/EBITDA";
 import Summary from "@/components/Summary";
+import BalanceSheet from "@/components/BalanceSheet";
 import IndustrySelector from "@/components/IndustrySelector";
 import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target } from "lucide-react";
 
@@ -54,16 +55,44 @@ export interface FinancialData {
       recruitment: { year1: number; year2: number; year3: number; };
     };
     admin: {
-      rent: { year1: number; year2: number; year3: number; };
-      utilities: { year1: number; year2: number; year3: number; };
-      domesticTravel: { year1: number; year2: number; year3: number; };
-      internationalTravel: { year1: number; year2: number; year3: number; };
-      insurance: { year1: number; year2: number; year3: number; };
+      rent: { 
+        monthlyAmount: number; 
+        utilitiesPercentage: number; 
+        year1: number; year2: number; year3: number; 
+      };
+      travel: {
+        tripsPerMonth: number;
+        domesticCostPerTrip: number;
+        internationalCostPerTrip: number;
+        domesticTripsRatio: number; // percentage of domestic vs international
+        year1: number; year2: number; year3: number;
+      };
+      insurance: { 
+        percentageOfAssets: number; 
+        year1: number; year2: number; year3: number; 
+      };
       legal: { year1: number; year2: number; year3: number; };
       accounting: { year1: number; year2: number; year3: number; };
-      software: { year1: number; year2: number; year3: number; };
-      equipment: { year1: number; year2: number; year3: number; };
+      software: {
+        items: {
+          id: string;
+          name: string;
+          department: 'technology' | 'sales' | 'marketing' | 'operations' | 'hr' | 'finance' | 'other';
+          costType: 'monthly' | 'yearly' | 'one-time';
+          amount: number;
+        }[];
+        year1: number; year2: number; year3: number;
+      };
       other: { year1: number; year2: number; year3: number; };
+    };
+    balanceSheet: {
+      fixedAssets: { year1: number; year2: number; year3: number; };
+      accountsReceivable: { year1: number; year2: number; year3: number; };
+      accountsPayable: { year1: number; year2: number; year3: number; };
+      cashAndBank: { year1: number; year2: number; year3: number; };
+      inventory: { year1: number; year2: number; year3: number; };
+      otherAssets: { year1: number; year2: number; year3: number; };
+      otherLiabilities: { year1: number; year2: number; year3: number; };
     };
     marketing: {
       isPercentageOfRevenue: boolean;
@@ -112,16 +141,38 @@ const Index = () => {
         recruitment: { year1: 0, year2: 0, year3: 0 }
       },
       admin: {
-        rent: { year1: 0, year2: 0, year3: 0 },
-        utilities: { year1: 0, year2: 0, year3: 0 },
-        domesticTravel: { year1: 0, year2: 0, year3: 0 },
-        internationalTravel: { year1: 0, year2: 0, year3: 0 },
-        insurance: { year1: 0, year2: 0, year3: 0 },
+        rent: { 
+          monthlyAmount: 0, 
+          utilitiesPercentage: 15, 
+          year1: 0, year2: 0, year3: 0 
+        },
+        travel: {
+          tripsPerMonth: 0,
+          domesticCostPerTrip: 0,
+          internationalCostPerTrip: 0,
+          domesticTripsRatio: 70,
+          year1: 0, year2: 0, year3: 0
+        },
+        insurance: { 
+          percentageOfAssets: 2, 
+          year1: 0, year2: 0, year3: 0 
+        },
         legal: { year1: 0, year2: 0, year3: 0 },
         accounting: { year1: 0, year2: 0, year3: 0 },
-        software: { year1: 0, year2: 0, year3: 0 },
-        equipment: { year1: 0, year2: 0, year3: 0 },
+        software: {
+          items: [],
+          year1: 0, year2: 0, year3: 0
+        },
         other: { year1: 0, year2: 0, year3: 0 }
+      },
+      balanceSheet: {
+        fixedAssets: { year1: 0, year2: 0, year3: 0 },
+        accountsReceivable: { year1: 0, year2: 0, year3: 0 },
+        accountsPayable: { year1: 0, year2: 0, year3: 0 },
+        cashAndBank: { year1: 0, year2: 0, year3: 0 },
+        inventory: { year1: 0, year2: 0, year3: 0 },
+        otherAssets: { year1: 0, year2: 0, year3: 0 },
+        otherLiabilities: { year1: 0, year2: 0, year3: 0 }
       },
       marketing: {
         isPercentageOfRevenue: true,
@@ -188,7 +239,7 @@ const Index = () => {
               </div>
             </div>
             
-            <TabsList className="grid w-full grid-cols-6 bg-white shadow-sm">
+            <TabsList className="grid w-full grid-cols-7 bg-white shadow-sm">
               <TabsTrigger value="revenue" className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
                 Revenue
@@ -208,6 +259,10 @@ const Index = () => {
               <TabsTrigger value="ebitda" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 EBITDA
+              </TabsTrigger>
+              <TabsTrigger value="balance-sheet" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Balance Sheet
               </TabsTrigger>
               <TabsTrigger value="summary" className="flex items-center gap-2">
                 <Target className="w-4 h-4" />
@@ -288,6 +343,7 @@ const Index = () => {
                       ...data
                     })}
                     revenueStreams={financialData.revenueStreams}
+                    balanceSheetData={financialData.costs.balanceSheet}
                   />
                 </CardContent>
               </Card>
@@ -303,6 +359,26 @@ const Index = () => {
                 </CardHeader>
                 <CardContent>
                   <EBITDA data={financialData} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="balance-sheet">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Balance Sheet</CardTitle>
+                  <CardDescription>
+                    Assets, liabilities, and equity projections
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <BalanceSheet 
+                    data={financialData.costs.balanceSheet}
+                    onChange={(data) => updateFinancialData('costs', {
+                      ...financialData.costs,
+                      balanceSheet: data
+                    })}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
