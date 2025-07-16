@@ -9,6 +9,7 @@ import GrossProfit from "@/components/GrossProfit";
 import OperationalExpenses from "@/components/OperationalExpenses";
 import EBITDA from "@/components/EBITDA";
 import Summary from "@/components/Summary";
+import FinancialStatements from "@/components/FinancialStatements";
 import BalanceSheet from "@/components/BalanceSheet";
 import IndustrySelector from "@/components/IndustrySelector";
 import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target } from "lucide-react";
@@ -277,7 +278,7 @@ const Index = () => {
               </div>
             </div>
             
-            <TabsList className="grid w-full grid-cols-7 bg-white shadow-sm">
+            <TabsList className="grid w-full grid-cols-8 bg-white shadow-sm">
               <TabsTrigger value="revenue" className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
                 Revenue
@@ -301,6 +302,10 @@ const Index = () => {
               <TabsTrigger value="balance-sheet" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
                 Balance Sheet
+              </TabsTrigger>
+              <TabsTrigger value="financial-statements" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Statements
               </TabsTrigger>
               <TabsTrigger value="summary" className="flex items-center gap-2">
                 <Target className="w-4 h-4" />
@@ -422,7 +427,24 @@ const Index = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="summary">
+        <TabsContent value="financial-statements">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Financial Statements & Analysis
+              </CardTitle>
+              <CardDescription>
+                Comprehensive financial statements with analysis, ratios, and insights
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FinancialStatements data={financialData} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="summary">
               <Card>
                 <CardHeader>
                   <CardTitle>Financial Summary</CardTitle>
