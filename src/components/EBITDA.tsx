@@ -42,7 +42,7 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
     
     const marketingCosts = data.costs.marketing.isPercentageOfRevenue 
       ? calculateTotalRevenue(year) * (data.costs.marketing.percentageOfRevenue / 100)
-      : data.costs.marketing.manualBudget[year];
+      : (data.costs.marketing.manualBudget?.[year] || 0);
     
     return teamCosts + adminCosts + marketingCosts;
   };
@@ -78,11 +78,27 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
 
   const expenseBreakdownData = [1, 2, 3].map(year => {
     const yearKey = `year${year}` as 'year1' | 'year2' | 'year3';
-    const teamCosts = Object.values(data.costs.team).reduce((sum, cost) => sum + cost[yearKey], 0);
-    const adminCosts = Object.values(data.costs.admin).reduce((sum, cost) => sum + cost[yearKey], 0);
+    
+    // Calculate team costs properly
+    const employeeCosts = data.costs.team.employees?.reduce((sum, emp) => sum + emp.salary, 0) || 0;
+    const consultantCosts = data.costs.team.consultants?.reduce((sum, cons) => sum + (cons.monthlyCost * 12), 0) || 0;
+    const benefitsCosts = ((employeeCosts + consultantCosts) * (data.costs.team.healthCare.percentage + data.costs.team.benefits.percentage) / 100) + 
+                         (data.costs.team.healthCare.amount + data.costs.team.benefits.amount + data.costs.team.iqama.amount) * 12;
+    const recruitmentCosts = data.costs.team.recruitment[yearKey] || 0;
+    const teamCosts = employeeCosts + consultantCosts + benefitsCosts + recruitmentCosts;
+    
+    // Calculate admin costs properly
+    const adminCosts = (data.costs.admin.rent[yearKey] || 0) + 
+                      (data.costs.admin.travel[yearKey] || 0) + 
+                      (data.costs.admin.insurance[yearKey] || 0) + 
+                      (data.costs.admin.legal[yearKey] || 0) + 
+                      (data.costs.admin.accounting[yearKey] || 0) + 
+                      (data.costs.admin.software[yearKey] || 0) + 
+                      (data.costs.admin.other[yearKey] || 0);
+    
     const marketingCosts = data.costs.marketing.isPercentageOfRevenue 
       ? calculateTotalRevenue(yearKey) * (data.costs.marketing.percentageOfRevenue / 100)
-      : data.costs.marketing.manualBudget[yearKey];
+      : (data.costs.marketing.manualBudget?.[yearKey] || 0);
     
     return {
       year: `Year ${year}`,
