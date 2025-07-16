@@ -23,8 +23,22 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
   };
 
   const calculateOperationalExpenses = (year: 'year1' | 'year2' | 'year3') => {
-    const teamCosts = Object.values(data.costs.team).reduce((sum, cost) => sum + cost[year], 0);
-    const adminCosts = Object.values(data.costs.admin).reduce((sum, cost) => sum + cost[year], 0);
+    // Calculate team costs from employees and consultants
+    const employeeCosts = data.costs.team.employees?.reduce((sum, emp) => sum + emp.salary, 0) || 0;
+    const consultantCosts = data.costs.team.consultants?.reduce((sum, cons) => sum + (cons.monthlyCost * 12), 0) || 0;
+    const benefitsCosts = ((employeeCosts + consultantCosts) * (data.costs.team.healthCare.percentage + data.costs.team.benefits.percentage) / 100) + 
+                         (data.costs.team.healthCare.amount + data.costs.team.benefits.amount + data.costs.team.iqama.amount) * 12;
+    const recruitmentCosts = data.costs.team.recruitment[year] || 0;
+    const teamCosts = employeeCosts + consultantCosts + benefitsCosts + recruitmentCosts;
+    
+    // Calculate admin costs
+    const adminCosts = (data.costs.admin.rent[year] || 0) + 
+                      (data.costs.admin.travel[year] || 0) + 
+                      (data.costs.admin.insurance[year] || 0) + 
+                      (data.costs.admin.legal[year] || 0) + 
+                      (data.costs.admin.accounting[year] || 0) + 
+                      (data.costs.admin.software[year] || 0) + 
+                      (data.costs.admin.other[year] || 0);
     
     const marketingCosts = data.costs.marketing.isPercentageOfRevenue 
       ? calculateTotalRevenue(year) * (data.costs.marketing.percentageOfRevenue / 100)

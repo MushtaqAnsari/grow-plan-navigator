@@ -9,11 +9,13 @@ import GrossProfit from "@/components/GrossProfit";
 import OperationalExpenses from "@/components/OperationalExpenses";
 import EBITDA from "@/components/EBITDA";
 import LoansAndFinancing from "@/components/LoansAndFinancing";
+import Taxation from "@/components/Taxation";
+import NetProfit from "@/components/NetProfit";
 import Summary from "@/components/Summary";
 import FinancialStatements from "@/components/FinancialStatements";
 import BalanceSheet from "@/components/BalanceSheet";
 import IndustrySelector from "@/components/IndustrySelector";
-import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target, Calculator } from "lucide-react";
+import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target, Calculator, Receipt, Award } from "lucide-react";
 
 export interface FinancialData {
   revenueStreams: {
@@ -153,6 +155,23 @@ export interface FinancialData {
       };
     }[];
     totalInterestExpense: {
+      year1: number;
+      year2: number;
+      year3: number;
+    };
+  };
+  taxation?: {
+    incomeTax: {
+      enabled: boolean;
+      corporateRate: number;
+      year1: number;
+      year2: number;
+      year3: number;
+    };
+    zakat: {
+      enabled: boolean;
+      rate: number;
+      calculationMethod: 'net-worth' | 'profit';
       year1: number;
       year2: number;
       year3: number;
@@ -631,7 +650,7 @@ const Index = () => {
               </div>
             </div>
             
-            <TabsList className="grid w-full grid-cols-9 bg-white shadow-sm">
+            <TabsList className="grid w-full grid-cols-11 bg-white shadow-sm">
               <TabsTrigger value="revenue" className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
                 Revenue
@@ -655,6 +674,14 @@ const Index = () => {
               <TabsTrigger value="loans" className="flex items-center gap-2">
                 <Calculator className="w-4 h-4" />
                 Loans
+              </TabsTrigger>
+              <TabsTrigger value="taxation" className="flex items-center gap-2">
+                <Receipt className="w-4 h-4" />
+                Taxation
+              </TabsTrigger>
+              <TabsTrigger value="net-profit" className="flex items-center gap-2">
+                <Award className="w-4 h-4" />
+                Net Profit
               </TabsTrigger>
               <TabsTrigger value="balance-sheet" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
@@ -777,6 +804,43 @@ const Index = () => {
                     onChange={(loansData) => updateFinancialData('loansAndFinancing', loansData)}
                     financialData={financialData}
                   />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="taxation">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Receipt className="w-5 h-5" />
+                    Taxation & Zakat
+                  </CardTitle>
+                  <CardDescription>
+                    Configure income tax and zakat calculations according to Saudi regulations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Taxation 
+                    data={financialData}
+                    onUpdateData={setFinancialData}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="net-profit">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="w-5 h-5" />
+                    Net Profit Analysis
+                  </CardTitle>
+                  <CardDescription>
+                    Comprehensive net profit analysis with metrics, charts, and insights
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <NetProfit data={financialData} />
                 </CardContent>
               </Card>
             </TabsContent>
