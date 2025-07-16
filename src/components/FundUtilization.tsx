@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts';
 import { DollarSign, TrendingDown, Calendar, Target, Trash2, Plus } from 'lucide-react';
+import { useFinancialData } from "@/hooks/useFinancialData";
+import { useAuth } from "@/hooks/useAuth";
 
 interface FundAllocation {
   id: string;
@@ -31,6 +33,9 @@ interface RunwayData {
 }
 
 const FundUtilization = () => {
+  const { user } = useAuth();
+  const { saveFundUtilizationData } = useFinancialData(user?.id);
+  
   const [totalFunding, setTotalFunding] = useState(2000000);
   const [fundAllocations, setFundAllocations] = useState<FundAllocation[]>([
     {
@@ -149,6 +154,24 @@ const FundUtilization = () => {
       percentage: (allocation.amount / totalFunding) * 100
     })));
   }, [totalFunding]);
+
+  // Auto-save fund utilization data to database when it changes
+  useEffect(() => {
+    if (user?.id && fundAllocations.length > 0) {
+      const timeoutId = setTimeout(() => {
+        const mappedAllocations = fundAllocations.map(allocation => ({
+          category: allocation.category,
+          description: allocation.description,
+          amount: allocation.amount,
+          percentage: allocation.percentage,
+          timeline: allocation.timeframe
+        }));
+        saveFundUtilizationData(mappedAllocations);
+      }, 1000); // Auto-save after 1 second of inactivity
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [fundAllocations, user?.id, saveFundUtilizationData]);
 
   const totalAllocated = fundAllocations.reduce((sum, allocation) => sum + allocation.amount, 0);
   const remainingFunds = totalFunding - totalAllocated;

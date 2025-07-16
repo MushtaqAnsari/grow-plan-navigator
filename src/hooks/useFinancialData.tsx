@@ -168,7 +168,12 @@ export const useFinancialData = (userId: string | undefined) => {
         employeePlanningResult,
         loansFinancingResult,
         taxationResult,
-        financialModelResult
+        financialModelResult,
+        balanceSheetAssetsResult,
+        accountsReceivableResult,
+        capTableStakeholdersResult,
+        safeAgreementsResult,
+        fundUtilizationResult
       ] = await Promise.all([
         supabase.from('revenue_streams').select('*').eq('financial_model_id', modelId),
         supabase.from('cost_structures').select('*').eq('financial_model_id', modelId),
@@ -176,7 +181,12 @@ export const useFinancialData = (userId: string | undefined) => {
         supabase.from('employee_planning').select('*').eq('financial_model_id', modelId),
         supabase.from('loans_financing').select('*').eq('financial_model_id', modelId),
         supabase.from('taxation').select('*').eq('financial_model_id', modelId),
-        supabase.from('financial_models').select('*').eq('id', modelId).single()
+        supabase.from('financial_models').select('*').eq('id', modelId).single(),
+        supabase.from('balance_sheet_assets').select('*').eq('financial_model_id', modelId),
+        supabase.from('accounts_receivable').select('*').eq('financial_model_id', modelId),
+        supabase.from('cap_table_stakeholders').select('*').eq('financial_model_id', modelId),
+        supabase.from('safe_agreements').select('*').eq('financial_model_id', modelId),
+        supabase.from('fund_utilization').select('*').eq('financial_model_id', modelId)
       ]);
 
       // Build financial data from database results
@@ -256,6 +266,61 @@ export const useFinancialData = (userId: string | undefined) => {
         }));
       }
 
+      // Map Balance Sheet Assets
+      if (balanceSheetAssetsResult.data && balanceSheetAssetsResult.data.length > 0) {
+        defaultData.costs.balanceSheet.fixedAssets.assets = balanceSheetAssetsResult.data.map(asset => ({
+          id: asset.id,
+          name: asset.asset_name,
+          cost: asset.asset_cost || 0,
+          usefulLife: asset.useful_life || 5,
+          assetClass: asset.asset_class as 'tangible' | 'intangible',
+          isFromCapitalizedPayroll: asset.is_from_capitalized_payroll || false
+        }));
+
+        // Calculate totals for balance sheet assets
+        let year1Total = 0, year2Total = 0, year3Total = 0;
+        defaultData.costs.balanceSheet.fixedAssets.assets.forEach(asset => {
+          const annualDepreciation = asset.cost / asset.usefulLife;
+          year1Total += asset.cost - annualDepreciation;
+          year2Total += asset.cost - (annualDepreciation * 2);
+          year3Total += asset.cost - (annualDepreciation * 3);
+        });
+
+        defaultData.costs.balanceSheet.fixedAssets.year1 = Math.max(0, year1Total);
+        defaultData.costs.balanceSheet.fixedAssets.year2 = Math.max(0, year2Total);
+        defaultData.costs.balanceSheet.fixedAssets.year3 = Math.max(0, year3Total);
+      }
+
+      // Map Accounts Receivable Configuration
+      if (accountsReceivableResult.data && accountsReceivableResult.data.length > 0) {
+        const arConfig: { [key: string]: any } = {};
+        accountsReceivableResult.data.forEach(ar => {
+          const revenueStream = defaultData.revenueStreams.find(rs => rs.name === ar.revenue_stream_name);
+          if (revenueStream) {
+            arConfig[ar.revenue_stream_name] = {
+              arDays: ar.ar_days,
+              year1: (revenueStream.year1 * ar.ar_days) / 365,
+              year2: (revenueStream.year2 * ar.ar_days) / 365,
+              year3: (revenueStream.year3 * ar.ar_days) / 365
+            };
+          }
+        });
+        
+        defaultData.costs.balanceSheet.accountsReceivable.revenueStreamARs = arConfig;
+        
+        // Calculate totals
+        const totalYear1 = Object.values(arConfig).reduce((sum: number, ar: any) => sum + ar.year1, 0);
+        const totalYear2 = Object.values(arConfig).reduce((sum: number, ar: any) => sum + ar.year2, 0);
+        const totalYear3 = Object.values(arConfig).reduce((sum: number, ar: any) => sum + ar.year3, 0);
+        
+        defaultData.costs.balanceSheet.accountsReceivable.totalYear1 = totalYear1;
+        defaultData.costs.balanceSheet.accountsReceivable.totalYear2 = totalYear2;
+        defaultData.costs.balanceSheet.accountsReceivable.totalYear3 = totalYear3;
+      }
+
+      // Add Cap Table and Fund Utilization data (extend FinancialData type to include these)
+      // For now, we'll store this in a temporary way until we update the FinancialData interface
+      
       setFinancialData(defaultData);
 
     } catch (error) {
@@ -479,12 +544,158 @@ export const useFinancialData = (userId: string | undefined) => {
               }))
             );
         }
+      } else if (section === 'costs') {
+        // Handle Balance Sheet assets saving
+        if (data.balanceSheet && data.balanceSheet.fixedAssets) {
+          // Delete existing assets first
+          await supabase
+            .from('balance_sheet_assets')
+            .delete()
+            .eq('financial_model_id', currentModelId);
+
+          // Insert new assets
+          if (data.balanceSheet.fixedAssets.assets.length > 0) {
+            await supabase
+              .from('balance_sheet_assets')
+              .insert(
+                data.balanceSheet.fixedAssets.assets.map((asset: any) => ({
+                  financial_model_id: currentModelId,
+                  asset_name: asset.name,
+                  asset_cost: asset.cost,
+                  useful_life: asset.usefulLife,
+                  asset_class: asset.assetClass,
+                  is_from_capitalized_payroll: asset.isFromCapitalizedPayroll
+                }))
+              );
+          }
+        }
+
+        // Handle Accounts Receivable configuration saving
+        if (data.balanceSheet && data.balanceSheet.accountsReceivable) {
+          // Delete existing AR configuration first
+          await supabase
+            .from('accounts_receivable')
+            .delete()
+            .eq('financial_model_id', currentModelId);
+
+          // Insert new AR configuration
+          const arEntries = Object.entries(data.balanceSheet.accountsReceivable.revenueStreamARs || {});
+          if (arEntries.length > 0) {
+            await supabase
+              .from('accounts_receivable')
+              .insert(
+                arEntries.map(([streamName, arData]: [string, any]) => ({
+                  financial_model_id: currentModelId,
+                  revenue_stream_name: streamName,
+                  ar_days: arData.arDays || 30
+                }))
+              );
+          }
+        }
       }
-      // For other sections like 'costs', we don't save to database yet
-      // as they're complex nested objects that need separate handling
+      // For other sections we don't save to database yet
 
     } catch (error) {
       console.error(`Error saving ${section}:`, error);
+    }
+  };
+
+  // New functions for Cap Table and Fund Utilization
+  const saveCapTableData = async (stakeholders: any[], safeAgreements: any[]) => {
+    if (!userId || !currentModelId) return;
+
+    try {
+      // Save stakeholders
+      await supabase
+        .from('cap_table_stakeholders')
+        .delete()
+        .eq('financial_model_id', currentModelId);
+
+      if (stakeholders.length > 0) {
+        await supabase
+          .from('cap_table_stakeholders')
+          .insert(
+            stakeholders.map(stakeholder => ({
+              financial_model_id: currentModelId,
+              name: stakeholder.name,
+              type: stakeholder.type,
+              shares: stakeholder.shares,
+              share_class: stakeholder.shareClass,
+              investment_amount: stakeholder.investmentAmount || 0
+            }))
+          );
+      }
+
+      // Save SAFE agreements
+      await supabase
+        .from('safe_agreements')
+        .delete()
+        .eq('financial_model_id', currentModelId);
+
+      if (safeAgreements.length > 0) {
+        await supabase
+          .from('safe_agreements')
+          .insert(
+            safeAgreements.map(safe => ({
+              financial_model_id: currentModelId,
+              investor_name: safe.investorName,
+              amount: safe.amount,
+              valuation_cap: safe.valuationCap,
+              discount_rate: safe.discountRate,
+              is_converted: safe.isConverted || false
+            }))
+          );
+      }
+
+      toast({
+        title: "Cap Table Saved",
+        description: "Your cap table data has been saved successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving cap table:', error);
+      toast({
+        title: "Save Error",
+        description: "Failed to save cap table data.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const saveFundUtilizationData = async (useOfFunds: any[]) => {
+    if (!userId || !currentModelId) return;
+
+    try {
+      await supabase
+        .from('fund_utilization')
+        .delete()
+        .eq('financial_model_id', currentModelId);
+
+      if (useOfFunds.length > 0) {
+        await supabase
+          .from('fund_utilization')
+          .insert(
+            useOfFunds.map(fund => ({
+              financial_model_id: currentModelId,
+              category: fund.category,
+              description: fund.description,
+              amount: fund.amount,
+              percentage: fund.percentage,
+              timeline: fund.timeline || 'year1'
+            }))
+          );
+      }
+
+      toast({
+        title: "Fund Utilization Saved", 
+        description: "Your fund utilization data has been saved successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving fund utilization:', error);
+      toast({
+        title: "Save Error",
+        description: "Failed to save fund utilization data.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -497,6 +708,8 @@ export const useFinancialData = (userId: string | undefined) => {
     companyData,
     setCompanyData: saveCompanyData,
     industry,
-    setIndustry
+    setIndustry,
+    saveCapTableData,
+    saveFundUtilizationData
   };
 };

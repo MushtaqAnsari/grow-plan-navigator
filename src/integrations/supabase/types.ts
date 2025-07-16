@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts_receivable: {
+        Row: {
+          ar_days: number | null
+          created_at: string
+          financial_model_id: string
+          id: string
+          revenue_stream_name: string
+          updated_at: string
+        }
+        Insert: {
+          ar_days?: number | null
+          created_at?: string
+          financial_model_id: string
+          id?: string
+          revenue_stream_name: string
+          updated_at?: string
+        }
+        Update: {
+          ar_days?: number | null
+          created_at?: string
+          financial_model_id?: string
+          id?: string
+          revenue_stream_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      balance_sheet_assets: {
+        Row: {
+          asset_class: string | null
+          asset_cost: number | null
+          asset_name: string
+          created_at: string
+          financial_model_id: string
+          id: string
+          is_from_capitalized_payroll: boolean | null
+          updated_at: string
+          useful_life: number | null
+        }
+        Insert: {
+          asset_class?: string | null
+          asset_cost?: number | null
+          asset_name: string
+          created_at?: string
+          financial_model_id: string
+          id?: string
+          is_from_capitalized_payroll?: boolean | null
+          updated_at?: string
+          useful_life?: number | null
+        }
+        Update: {
+          asset_class?: string | null
+          asset_cost?: number | null
+          asset_name?: string
+          created_at?: string
+          financial_model_id?: string
+          id?: string
+          is_from_capitalized_payroll?: boolean | null
+          updated_at?: string
+          useful_life?: number | null
+        }
+        Relationships: []
+      }
+      cap_table_stakeholders: {
+        Row: {
+          created_at: string
+          financial_model_id: string
+          id: string
+          investment_amount: number | null
+          name: string
+          share_class: string | null
+          shares: number | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          financial_model_id: string
+          id?: string
+          investment_amount?: number | null
+          name: string
+          share_class?: string | null
+          shares?: number | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          financial_model_id?: string
+          id?: string
+          investment_amount?: number | null
+          name?: string
+          share_class?: string | null
+          shares?: number | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cost_structures: {
         Row: {
           created_at: string
@@ -141,6 +240,42 @@ export type Database = {
           language?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      fund_utilization: {
+        Row: {
+          amount: number | null
+          category: string
+          created_at: string
+          description: string | null
+          financial_model_id: string
+          id: string
+          percentage: number | null
+          timeline: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          category: string
+          created_at?: string
+          description?: string | null
+          financial_model_id: string
+          id?: string
+          percentage?: number | null
+          timeline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          financial_model_id?: string
+          id?: string
+          percentage?: number | null
+          timeline?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -278,6 +413,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      safe_agreements: {
+        Row: {
+          amount: number
+          created_at: string
+          discount_rate: number | null
+          financial_model_id: string
+          id: string
+          investor_name: string
+          is_converted: boolean | null
+          updated_at: string
+          valuation_cap: number | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          discount_rate?: number | null
+          financial_model_id: string
+          id?: string
+          investor_name: string
+          is_converted?: boolean | null
+          updated_at?: string
+          valuation_cap?: number | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          discount_rate?: number | null
+          financial_model_id?: string
+          id?: string
+          investor_name?: string
+          is_converted?: boolean | null
+          updated_at?: string
+          valuation_cap?: number | null
+        }
+        Relationships: []
       }
       taxation: {
         Row: {

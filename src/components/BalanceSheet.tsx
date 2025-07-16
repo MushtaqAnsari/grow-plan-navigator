@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Building, CreditCard, Banknote, Package } from "lucide-react";
 import { FinancialData } from "@/pages/Index";
+import { useFinancialData } from "@/hooks/useFinancialData";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BalanceSheetProps {
   data: FinancialData['costs']['balanceSheet'];
@@ -18,6 +20,19 @@ interface BalanceSheetProps {
 const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStreams }) => {
   const [activeTab, setActiveTab] = useState("fixed-assets");
   const [selectedRevenueStream, setSelectedRevenueStream] = useState(revenueStreams[0]?.name || '');
+  const { user } = useAuth();
+  const { updateFinancialData } = useFinancialData(user?.id);
+
+  // Auto-save balance sheet data changes to database
+  useEffect(() => {
+    if (user?.id && data) {
+      const timeoutId = setTimeout(() => {
+        updateFinancialData('costs', { balanceSheet: data });
+      }, 1000); // Auto-save after 1 second of inactivity
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [data, user?.id, updateFinancialData]);
 
   const updateFixedAssets = (assets: FinancialData['costs']['balanceSheet']['fixedAssets']['assets']) => {
     // Calculate total cost and depreciation

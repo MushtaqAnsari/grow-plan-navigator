@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Trash2, Plus, Users, TrendingUp, Percent, Calculator, FileText, Settings, Share2 } from 'lucide-react';
+import { useFinancialData } from "@/hooks/useFinancialData";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Stakeholder {
   id: string;
@@ -81,6 +83,8 @@ interface CapTableData {
 }
 
 const ValuationModel = () => {
+  const { user } = useAuth();
+  const { saveCapTableData } = useFinancialData(user?.id);
   const [capTableData, setCapTableData] = useState<CapTableData>({
     companyName: "Your Startup",
     shareClasses: [
@@ -186,6 +190,17 @@ const ValuationModel = () => {
   const totalSAFEAmount = capTableData.safeAgreements
     .filter(safe => safe.status === 'active')
     .reduce((sum, safe) => sum + safe.amount, 0);
+
+  // Auto-save cap table data to database when it changes
+  useEffect(() => {
+    if (user?.id && capTableData.stakeholders.length > 0) {
+      const timeoutId = setTimeout(() => {
+        saveCapTableData(capTableData.stakeholders, capTableData.safeAgreements);
+      }, 1000); // Auto-save after 1 second of inactivity
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [capTableData.stakeholders, capTableData.safeAgreements, user?.id, saveCapTableData]);
 
   const calculateOwnershipPercentages = () => {
     return capTableData.stakeholders.map(stakeholder => ({
