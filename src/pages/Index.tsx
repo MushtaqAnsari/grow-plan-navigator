@@ -4,11 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import RevenueStreams from "@/components/RevenueStreams";
-import CostStructure from "@/components/CostStructure";
-import EmployeePlanning from "@/components/EmployeePlanning";
-import FinancialStatements from "@/components/FinancialStatements";
-import ValuationModel from "@/components/ValuationModel";
-import FundUtilization from "@/components/FundUtilization";
+import DirectCosts from "@/components/DirectCosts";
+import GrossProfit from "@/components/GrossProfit";
+import OperationalExpenses from "@/components/OperationalExpenses";
+import EBITDA from "@/components/EBITDA";
+import Summary from "@/components/Summary";
 import IndustrySelector from "@/components/IndustrySelector";
 import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target } from "lucide-react";
 
@@ -176,25 +176,25 @@ const Index = () => {
                 <TrendingUp className="w-4 h-4" />
                 Revenue
               </TabsTrigger>
-              <TabsTrigger value="costs" className="flex items-center gap-2">
+              <TabsTrigger value="direct-costs" className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4" />
-                Costs
+                Direct Costs
               </TabsTrigger>
-              <TabsTrigger value="employees" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Team
-              </TabsTrigger>
-              <TabsTrigger value="statements" className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Statements
-              </TabsTrigger>
-              <TabsTrigger value="valuation" className="flex items-center gap-2">
+              <TabsTrigger value="gross-profit" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                Valuation
+                Gross Profit
               </TabsTrigger>
-              <TabsTrigger value="funding" className="flex items-center gap-2">
+              <TabsTrigger value="operational" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Operational
+              </TabsTrigger>
+              <TabsTrigger value="ebitda" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                EBITDA
+              </TabsTrigger>
+              <TabsTrigger value="summary" className="flex items-center gap-2">
                 <Target className="w-4 h-4" />
-                Funding
+                Summary
               </TabsTrigger>
             </TabsList>
 
@@ -216,65 +216,93 @@ const Index = () => {
               </Card>
             </TabsContent>
 
-          <TabsContent value="costs">
-            <Card>
-              <CardHeader>
-                <CardTitle>Cost Structure</CardTitle>
-                <CardDescription>
-                  Break down your cost structure across different categories
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <CostStructure 
-                  data={financialData.costs}
-                  onChange={(data) => updateFinancialData('costs', data)}
-                  revenueStreams={financialData.revenueStreams}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="direct-costs">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Direct Costs</CardTitle>
+                  <CardDescription>
+                    Define direct costs associated with each revenue stream
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <DirectCosts 
+                    data={financialData.costs.revenueStreamCosts}
+                    onChange={(data) => updateFinancialData('costs', {
+                      ...financialData.costs,
+                      revenueStreamCosts: data
+                    })}
+                    revenueStreams={financialData.revenueStreams}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="employees">
-            <Card>
-              <CardHeader>
-                <CardTitle>Employee Planning</CardTitle>
-                <CardDescription>
-                  Plan your team growth and compensation structure
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <EmployeePlanning 
-                  data={financialData.employees}
-                  onChange={(data) => updateFinancialData('employees', data)}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="gross-profit">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Gross Profit Analysis</CardTitle>
+                  <CardDescription>
+                    Analyze gross profit margins and trends by revenue stream
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <GrossProfit data={financialData} />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="statements">
-            <FinancialStatements data={financialData} />
-          </TabsContent>
+            <TabsContent value="operational">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Operational Expenses</CardTitle>
+                  <CardDescription>
+                    Plan team, administrative, and marketing expenses
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <OperationalExpenses 
+                    data={{
+                      team: financialData.costs.team,
+                      admin: financialData.costs.admin,
+                      marketing: financialData.costs.marketing
+                    }}
+                    onChange={(data) => updateFinancialData('costs', {
+                      ...financialData.costs,
+                      ...data
+                    })}
+                    revenueStreams={financialData.revenueStreams}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="valuation">
-            <ValuationModel data={financialData} />
-          </TabsContent>
+            <TabsContent value="ebitda">
+              <Card>
+                <CardHeader>
+                  <CardTitle>EBITDA Analysis</CardTitle>
+                  <CardDescription>
+                    Monitor earnings before interest, taxes, depreciation, and amortization
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <EBITDA data={financialData} />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="funding">
-            <Card>
-              <CardHeader>
-                <CardTitle>Fund Utilization</CardTitle>
-                <CardDescription>
-                  Plan how you'll use your funding and track burn rate
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FundUtilization 
-                  data={financialData.funding}
-                  onChange={(data) => updateFinancialData('funding', data)}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="summary">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Financial Summary</CardTitle>
+                  <CardDescription>
+                    Key metrics, ratios, and performance indicators
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Summary data={financialData} />
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         )}
       </div>
