@@ -388,6 +388,7 @@ export const useFinancialData = (userId: string | undefined) => {
       [section]: data
     };
 
+    console.log(newData)
     setFinancialData(newData);
     
     // Auto-save after a short delay
