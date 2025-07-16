@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface RevenueStream {
   name: string;
@@ -19,9 +20,7 @@ interface RevenueStream {
   endingClientsY2?: number;
   endingClientsY3?: number;
   startingRevenuePerClient?: number;
-  endingRevenuePerClientY1?: number;
-  endingRevenuePerClientY2?: number;
-  endingRevenuePerClientY3?: number;
+  priceIncreaseRate?: number; // Yearly price increase percentage
   
   // E-commerce specific
   startingMonthlyOrders?: number;
@@ -29,9 +28,7 @@ interface RevenueStream {
   endingMonthlyOrdersY2?: number;
   endingMonthlyOrdersY3?: number;
   startingAOV?: number;
-  endingAOVY1?: number;
-  endingAOVY2?: number;
-  endingAOVY3?: number;
+  aovIncreaseRate?: number; // Yearly AOV increase percentage
 }
 
 interface RevenueStreamsProps {
@@ -52,17 +49,13 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
     endingClientsY2: 0,
     endingClientsY3: 0,
     startingRevenuePerClient: 0,
-    endingRevenuePerClientY1: 0,
-    endingRevenuePerClientY2: 0,
-    endingRevenuePerClientY3: 0,
+    priceIncreaseRate: 0,
     startingMonthlyOrders: 0,
     endingMonthlyOrdersY1: 0,
     endingMonthlyOrdersY2: 0,
     endingMonthlyOrdersY3: 0,
     startingAOV: 0,
-    endingAOVY1: 0,
-    endingAOVY2: 0,
-    endingAOVY3: 0
+    aovIncreaseRate: 0
   });
 
   const [newStream, setNewStream] = useState<RevenueStream>(getEmptyStream());
@@ -71,36 +64,40 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
     let updatedStream = { ...stream };
     
     if (industry === 'saas' && stream.startingClients && stream.startingRevenuePerClient) {
-      // Calculate SaaS revenue automatically
+      // Calculate revenue per client with price increases
+      const revenuePerClientY1 = (stream.startingRevenuePerClient || 0) * (1 + (stream.priceIncreaseRate || 0) / 100);
+      const revenuePerClientY2 = revenuePerClientY1 * (1 + (stream.priceIncreaseRate || 0) / 100);
+      const revenuePerClientY3 = revenuePerClientY2 * (1 + (stream.priceIncreaseRate || 0) / 100);
+      
+      // Calculate average clients for each year
       const avgClientsY1 = ((stream.startingClients || 0) + (stream.endingClientsY1 || 0)) / 2;
-      const avgRevenueY1 = ((stream.startingRevenuePerClient || 0) + (stream.endingRevenuePerClientY1 || 0)) / 2;
-      updatedStream.year1 = avgClientsY1 * avgRevenueY1 * 12;
-      
       const avgClientsY2 = ((stream.endingClientsY1 || 0) + (stream.endingClientsY2 || 0)) / 2;
-      const avgRevenueY2 = ((stream.endingRevenuePerClientY1 || 0) + (stream.endingRevenuePerClientY2 || 0)) / 2;
-      updatedStream.year2 = avgClientsY2 * avgRevenueY2 * 12;
-      
       const avgClientsY3 = ((stream.endingClientsY2 || 0) + (stream.endingClientsY3 || 0)) / 2;
-      const avgRevenueY3 = ((stream.endingRevenuePerClientY2 || 0) + (stream.endingRevenuePerClientY3 || 0)) / 2;
-      updatedStream.year3 = avgClientsY3 * avgRevenueY3 * 12;
+      
+      // Calculate yearly revenue
+      updatedStream.year1 = avgClientsY1 * revenuePerClientY1 * 12;
+      updatedStream.year2 = avgClientsY2 * revenuePerClientY2 * 12;
+      updatedStream.year3 = avgClientsY3 * revenuePerClientY3 * 12;
       
       // Calculate YoY growth rate
       if (updatedStream.year1 > 0 && updatedStream.year2 > 0) {
         updatedStream.growthRate = ((updatedStream.year2 - updatedStream.year1) / updatedStream.year1) * 100;
       }
     } else if (industry === 'ecommerce' && stream.startingMonthlyOrders && stream.startingAOV) {
-      // Calculate e-commerce revenue automatically
+      // Calculate AOV with increases
+      const aovY1 = (stream.startingAOV || 0) * (1 + (stream.aovIncreaseRate || 0) / 100);
+      const aovY2 = aovY1 * (1 + (stream.aovIncreaseRate || 0) / 100);
+      const aovY3 = aovY2 * (1 + (stream.aovIncreaseRate || 0) / 100);
+      
+      // Calculate average orders for each year
       const avgOrdersY1 = ((stream.startingMonthlyOrders || 0) + (stream.endingMonthlyOrdersY1 || 0)) / 2;
-      const avgAOVY1 = ((stream.startingAOV || 0) + (stream.endingAOVY1 || 0)) / 2;
-      updatedStream.year1 = avgOrdersY1 * avgAOVY1 * 12;
-      
       const avgOrdersY2 = ((stream.endingMonthlyOrdersY1 || 0) + (stream.endingMonthlyOrdersY2 || 0)) / 2;
-      const avgAOVY2 = ((stream.endingAOVY1 || 0) + (stream.endingAOVY2 || 0)) / 2;
-      updatedStream.year2 = avgOrdersY2 * avgAOVY2 * 12;
-      
       const avgOrdersY3 = ((stream.endingMonthlyOrdersY2 || 0) + (stream.endingMonthlyOrdersY3 || 0)) / 2;
-      const avgAOVY3 = ((stream.endingAOVY2 || 0) + (stream.endingAOVY3 || 0)) / 2;
-      updatedStream.year3 = avgOrdersY3 * avgAOVY3 * 12;
+      
+      // Calculate yearly revenue
+      updatedStream.year1 = avgOrdersY1 * aovY1 * 12;
+      updatedStream.year2 = avgOrdersY2 * aovY2 * 12;
+      updatedStream.year3 = avgOrdersY3 * aovY3 * 12;
       
       // Calculate YoY growth rate
       if (updatedStream.year1 > 0 && updatedStream.year2 > 0) {
@@ -109,6 +106,15 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
     }
     
     return updatedStream;
+  };
+
+  const getChartData = () => {
+    const calculated = calculateRevenue(newStream);
+    return [
+      { year: 'Year 1', revenue: Math.round(calculated.year1) },
+      { year: 'Year 2', revenue: Math.round(calculated.year2) },
+      { year: 'Year 3', revenue: Math.round(calculated.year3) }
+    ];
   };
 
   const addRevenueStream = () => {
@@ -123,7 +129,7 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
     <div className="space-y-4">
       <h4 className="font-medium mb-3 text-slate-700">SaaS Metrics</h4>
       <div className="grid grid-cols-2 gap-6">
-        {/* Starting metrics */}
+        {/* Starting metrics and growth */}
         <div className="space-y-3">
           <h5 className="font-medium text-sm text-slate-600">Starting (Month 1, Year 1)</h5>
           <div>
@@ -144,14 +150,23 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
               onChange={(e) => setNewStream({ ...newStream, startingRevenuePerClient: Number(e.target.value) })}
             />
           </div>
+          <div>
+            <Label>Yearly Price Increase (%)</Label>
+            <Input
+              type="number"
+              placeholder="10"
+              value={newStream.priceIncreaseRate || ''}
+              onChange={(e) => setNewStream({ ...newStream, priceIncreaseRate: Number(e.target.value) })}
+            />
+          </div>
         </div>
 
-        {/* Ending metrics for each year */}
+        {/* Client growth projections */}
         <div className="space-y-3">
-          <h5 className="font-medium text-sm text-slate-600">Projections (End of Each Year)</h5>
+          <h5 className="font-medium text-sm text-slate-600">Client Growth Projections</h5>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label className="text-xs">Year 1 Clients</Label>
+              <Label className="text-xs">End Year 1</Label>
               <Input
                 type="number"
                 placeholder="50"
@@ -160,7 +175,7 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
               />
             </div>
             <div>
-              <Label className="text-xs">Year 2 Clients</Label>
+              <Label className="text-xs">End Year 2</Label>
               <Input
                 type="number"
                 placeholder="150"
@@ -169,41 +184,12 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
               />
             </div>
             <div>
-              <Label className="text-xs">Year 3 Clients</Label>
+              <Label className="text-xs">End Year 3</Label>
               <Input
                 type="number"
                 placeholder="400"
                 value={newStream.endingClientsY3 || ''}
                 onChange={(e) => setNewStream({ ...newStream, endingClientsY3: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs">Year 1 Revenue/Client ($)</Label>
-              <Input
-                type="number"
-                placeholder="75"
-                value={newStream.endingRevenuePerClientY1 || ''}
-                onChange={(e) => setNewStream({ ...newStream, endingRevenuePerClientY1: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Year 2 Revenue/Client ($)</Label>
-              <Input
-                type="number"
-                placeholder="100"
-                value={newStream.endingRevenuePerClientY2 || ''}
-                onChange={(e) => setNewStream({ ...newStream, endingRevenuePerClientY2: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Year 3 Revenue/Client ($)</Label>
-              <Input
-                type="number"
-                placeholder="125"
-                value={newStream.endingRevenuePerClientY3 || ''}
-                onChange={(e) => setNewStream({ ...newStream, endingRevenuePerClientY3: Number(e.target.value) })}
               />
             </div>
           </div>
@@ -236,13 +222,22 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
               onChange={(e) => setNewStream({ ...newStream, startingAOV: Number(e.target.value) })}
             />
           </div>
+          <div>
+            <Label>Yearly AOV Increase (%)</Label>
+            <Input
+              type="number"
+              placeholder="8"
+              value={newStream.aovIncreaseRate || ''}
+              onChange={(e) => setNewStream({ ...newStream, aovIncreaseRate: Number(e.target.value) })}
+            />
+          </div>
         </div>
 
         <div className="space-y-3">
-          <h5 className="font-medium text-sm text-slate-600">Projections (End of Each Year)</h5>
+          <h5 className="font-medium text-sm text-slate-600">Order Growth Projections</h5>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label className="text-xs">Year 1 Orders</Label>
+              <Label className="text-xs">End Year 1</Label>
               <Input
                 type="number"
                 placeholder="500"
@@ -251,7 +246,7 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
               />
             </div>
             <div>
-              <Label className="text-xs">Year 2 Orders</Label>
+              <Label className="text-xs">End Year 2</Label>
               <Input
                 type="number"
                 placeholder="1200"
@@ -260,41 +255,12 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
               />
             </div>
             <div>
-              <Label className="text-xs">Year 3 Orders</Label>
+              <Label className="text-xs">End Year 3</Label>
               <Input
                 type="number"
                 placeholder="2500"
                 value={newStream.endingMonthlyOrdersY3 || ''}
                 onChange={(e) => setNewStream({ ...newStream, endingMonthlyOrdersY3: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs">Year 1 AOV ($)</Label>
-              <Input
-                type="number"
-                placeholder="85"
-                value={newStream.endingAOVY1 || ''}
-                onChange={(e) => setNewStream({ ...newStream, endingAOVY1: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Year 2 AOV ($)</Label>
-              <Input
-                type="number"
-                placeholder="95"
-                value={newStream.endingAOVY2 || ''}
-                onChange={(e) => setNewStream({ ...newStream, endingAOVY2: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Year 3 AOV ($)</Label>
-              <Input
-                type="number"
-                placeholder="110"
-                value={newStream.endingAOVY3 || ''}
-                onChange={(e) => setNewStream({ ...newStream, endingAOVY3: Number(e.target.value) })}
               />
             </div>
           </div>
@@ -346,32 +312,65 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
             {industry === 'saas' && renderSaaSFields()}
             {industry === 'ecommerce' && renderECommerceFields()}
 
-            {/* Show calculated revenue projections */}
-            {(newStream.year1 > 0 || newStream.year2 > 0 || newStream.year3 > 0) && (
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-3 text-green-800">Calculated Revenue Projections</h4>
+            {/* Show calculated revenue projections with chart */}
+            {(calculateRevenue(newStream).year1 > 0 || calculateRevenue(newStream).year2 > 0 || calculateRevenue(newStream).year3 > 0) && (
+              <div className="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-lg border">
+                <h4 className="font-medium mb-4 text-slate-800">Revenue Projections</h4>
+                
+                {/* Chart */}
+                <div className="h-64 mb-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={getChartData()}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="year" stroke="#64748b" />
+                      <YAxis 
+                        stroke="#64748b"
+                        tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                      />
+                      <Tooltip 
+                        formatter={(value: number) => [`$${value.toLocaleString()}`, 'Revenue']}
+                        labelStyle={{ color: '#1e293b' }}
+                        contentStyle={{ 
+                          backgroundColor: 'white', 
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stroke="#059669" 
+                        strokeWidth={3}
+                        dot={{ fill: '#059669', strokeWidth: 2, r: 6 }}
+                        activeDot={{ r: 8, stroke: '#059669', strokeWidth: 2 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Numbers */}
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <p className="text-lg font-bold text-green-600">
+                    <p className="text-xl font-bold text-green-600">
                       ${Math.round(calculateRevenue(newStream).year1).toLocaleString()}
                     </p>
                     <p className="text-sm text-green-700">Year 1</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-green-600">
+                    <p className="text-xl font-bold text-green-600">
                       ${Math.round(calculateRevenue(newStream).year2).toLocaleString()}
                     </p>
                     <p className="text-sm text-green-700">Year 2</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-green-600">
+                    <p className="text-xl font-bold text-green-600">
                       ${Math.round(calculateRevenue(newStream).year3).toLocaleString()}
                     </p>
                     <p className="text-sm text-green-700">Year 3</p>
                   </div>
                 </div>
-                <div className="mt-2 text-center">
-                  <p className="text-sm text-green-600">
+                <div className="mt-3 text-center">
+                  <p className="text-sm text-green-600 font-medium">
                     YoY Growth Rate: {Math.round(calculateRevenue(newStream).growthRate)}%
                   </p>
                 </div>
