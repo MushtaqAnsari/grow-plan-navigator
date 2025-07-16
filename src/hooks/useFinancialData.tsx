@@ -315,15 +315,13 @@ export const useFinancialData = (userId: string | undefined) => {
         // Insert new streams
         await supabase
           .from('revenue_streams')
-          .insert(
-            data.revenueStreams.map(stream => ({
+          .insert({
               financial_model_id: currentModelId,
-              name: stream.name,
-              year1: stream.year1,
-              year2: stream.year2,
-              year3: stream.year3
-            }))
-          );
+              name: data.revenueStreams[0].name,
+              year1: data.revenueStreams[0].year1,
+              year2: data.revenueStreams[0].year2,
+              year3: data.revenueStreams[0].year3
+            });
       }
 
       // Save taxation data
