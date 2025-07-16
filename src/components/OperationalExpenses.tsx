@@ -300,11 +300,6 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     const annualRent = monthlyRent * 12;
     const utilities = annualRent * (data.admin.rent.utilitiesPercentage / 100);
     
-    // Update rent automatically
-    if (data.admin.rent[year] !== annualRent) {
-      updateAdminCost('rent', year, annualRent);
-    }
-    
     return { annualRent, utilities };
   };
 
@@ -315,20 +310,12 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     const internationalTrips = totalTripsPerYear * ((100 - domesticTripsRatio) / 100);
     const totalCost = (domesticTrips * domesticCostPerTrip) + (internationalTrips * internationalCostPerTrip);
     
-    if (data.admin.travel[year] !== totalCost) {
-      updateAdminCost('travel', year, totalCost);
-    }
-    
     return totalCost;
   };
 
   const calculateInsurance = (year: 'year1' | 'year2' | 'year3') => {
     const fixedAssets = balanceSheetData.fixedAssets[year] || 0;
     const insuranceCost = fixedAssets * (data.admin.insurance.percentageOfAssets / 100);
-    
-    if (data.admin.insurance[year] !== insuranceCost) {
-      updateAdminCost('insurance', year, insuranceCost);
-    }
     
     return insuranceCost;
   };
@@ -344,10 +331,6 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
       }
       return sum;
     }, 0);
-    
-    if (data.admin.software[year] !== totalCost) {
-      updateAdminCost('software', year, totalCost);
-    }
     
     return totalCost;
   };

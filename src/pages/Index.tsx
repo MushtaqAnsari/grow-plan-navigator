@@ -8,11 +8,12 @@ import DirectCosts from "@/components/DirectCosts";
 import GrossProfit from "@/components/GrossProfit";
 import OperationalExpenses from "@/components/OperationalExpenses";
 import EBITDA from "@/components/EBITDA";
+import LoansAndFinancing from "@/components/LoansAndFinancing";
 import Summary from "@/components/Summary";
 import FinancialStatements from "@/components/FinancialStatements";
 import BalanceSheet from "@/components/BalanceSheet";
 import IndustrySelector from "@/components/IndustrySelector";
-import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target } from "lucide-react";
+import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target, Calculator } from "lucide-react";
 
 export interface FinancialData {
   revenueStreams: {
@@ -133,6 +134,28 @@ export interface FinancialData {
       brandingDesign: { year1: number; year2: number; year3: number; };
       tools: { year1: number; year2: number; year3: number; };
       other: { year1: number; year2: number; year3: number; };
+    };
+  };
+  loansAndFinancing: {
+    loans: {
+      id: string;
+      name: string;
+      type: 'term' | 'line-of-credit' | 'convertible-note';
+      principalAmount: number;
+      interestRate: number;
+      termMonths: number;
+      startYear: 'year1' | 'year2' | 'year3';
+      isInterestOnly?: boolean;
+      conversionDetails?: {
+        discountRate: number;
+        valuationCap: number;
+        automaticConversion: boolean;
+      };
+    }[];
+    totalInterestExpense: {
+      year1: number;
+      year2: number;
+      year3: number;
     };
   };
   employees: {
@@ -527,6 +550,14 @@ const Index = () => {
         other: { year1: 20000, year2: 30000, year3: 45000 }
       }
     },
+    loansAndFinancing: {
+      loans: [],
+      totalInterestExpense: {
+        year1: 0,
+        year2: 0, 
+        year3: 0
+      }
+    },
     employees: [],
     funding: {
       totalFunding: 2000000,
@@ -600,7 +631,7 @@ const Index = () => {
               </div>
             </div>
             
-            <TabsList className="grid w-full grid-cols-8 bg-white shadow-sm">
+            <TabsList className="grid w-full grid-cols-9 bg-white shadow-sm">
               <TabsTrigger value="revenue" className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
                 Revenue
@@ -620,6 +651,10 @@ const Index = () => {
               <TabsTrigger value="ebitda" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 EBITDA
+              </TabsTrigger>
+              <TabsTrigger value="loans" className="flex items-center gap-2">
+                <Calculator className="w-4 h-4" />
+                Loans
               </TabsTrigger>
               <TabsTrigger value="balance-sheet" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
@@ -724,6 +759,24 @@ const Index = () => {
                 </CardHeader>
                 <CardContent>
                   <EBITDA data={financialData} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="loans">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Loans & Financing</CardTitle>
+                  <CardDescription>
+                    Manage loans, convertible notes, and calculate net profit after interest
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <LoansAndFinancing 
+                    data={financialData.loansAndFinancing}
+                    onChange={(loansData) => updateFinancialData('loansAndFinancing', loansData)}
+                    financialData={financialData}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
