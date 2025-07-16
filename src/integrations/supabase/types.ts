@@ -285,27 +285,60 @@ export type Database = {
           created_at: string
           financial_model_id: string
           id: string
+          income_tax_enabled: boolean | null
+          income_tax_rate: number | null
+          income_tax_year1: number | null
+          income_tax_year2: number | null
+          income_tax_year3: number | null
           other_taxes: number | null
           updated_at: string
           vat_rate: number | null
+          zakat_calculation_method: string | null
+          zakat_enabled: boolean | null
+          zakat_rate: number | null
+          zakat_year1: number | null
+          zakat_year2: number | null
+          zakat_year3: number | null
         }
         Insert: {
           corporate_tax_rate?: number | null
           created_at?: string
           financial_model_id: string
           id?: string
+          income_tax_enabled?: boolean | null
+          income_tax_rate?: number | null
+          income_tax_year1?: number | null
+          income_tax_year2?: number | null
+          income_tax_year3?: number | null
           other_taxes?: number | null
           updated_at?: string
           vat_rate?: number | null
+          zakat_calculation_method?: string | null
+          zakat_enabled?: boolean | null
+          zakat_rate?: number | null
+          zakat_year1?: number | null
+          zakat_year2?: number | null
+          zakat_year3?: number | null
         }
         Update: {
           corporate_tax_rate?: number | null
           created_at?: string
           financial_model_id?: string
           id?: string
+          income_tax_enabled?: boolean | null
+          income_tax_rate?: number | null
+          income_tax_year1?: number | null
+          income_tax_year2?: number | null
+          income_tax_year3?: number | null
           other_taxes?: number | null
           updated_at?: string
           vat_rate?: number | null
+          zakat_calculation_method?: string | null
+          zakat_enabled?: boolean | null
+          zakat_rate?: number | null
+          zakat_year1?: number | null
+          zakat_year2?: number | null
+          zakat_year3?: number | null
         }
         Relationships: [
           {

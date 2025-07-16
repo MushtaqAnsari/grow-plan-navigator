@@ -31,18 +31,46 @@ const Taxation: React.FC<TaxationProps> = ({ data, onUpdateData }) => {
     }
   };
 
-  const calculateEBITDA = (year: 'year1' | 'year2' | 'year3') => {
-    const totalRevenue = data.revenueStreams.reduce((sum, stream) => sum + stream[year], 0);
-    const directCosts = Object.values(data.costs.revenueStreamCosts).reduce((sum, stream) => {
-      return sum + Object.values(stream.directCosts).reduce((streamSum, cost) => streamSum + cost[year], 0);
-    }, 0);
-    const teamCosts = Object.values(data.costs.team).reduce((sum, cost) => sum + cost[year], 0);
-    const adminCosts = Object.values(data.costs.admin).reduce((sum, cost) => sum + cost[year], 0);
-    const marketingCosts = data.costs.marketing.isPercentageOfRevenue 
-      ? totalRevenue * (data.costs.marketing.percentageOfRevenue / 100)
-      : data.costs.marketing.manualBudget[year];
+  const calculateOperationalExpenses = (year: 'year1' | 'year2' | 'year3') => {
+    // Calculate team costs properly
+    const employeeCosts = data.costs.team.employees?.reduce((sum, emp) => sum + emp.salary, 0) || 0;
+    const consultantCosts = data.costs.team.consultants?.reduce((sum, cons) => sum + (cons.monthlyCost * 12), 0) || 0;
+    const benefitsCosts = ((employeeCosts + consultantCosts) * (data.costs.team.healthCare.percentage + data.costs.team.benefits.percentage) / 100) + 
+                         (data.costs.team.healthCare.amount + data.costs.team.benefits.amount + data.costs.team.iqama.amount) * 12;
+    const recruitmentCosts = data.costs.team.recruitment[year] || 0;
+    const teamCosts = employeeCosts + consultantCosts + benefitsCosts + recruitmentCosts;
     
-    return totalRevenue - directCosts - teamCosts - adminCosts - marketingCosts;
+    // Calculate admin costs properly
+    const adminCosts = (data.costs.admin.rent[year] || 0) + 
+                      (data.costs.admin.travel[year] || 0) + 
+                      (data.costs.admin.insurance[year] || 0) + 
+                      (data.costs.admin.legal[year] || 0) + 
+                      (data.costs.admin.accounting[year] || 0) + 
+                      (data.costs.admin.software[year] || 0) + 
+                      (data.costs.admin.other[year] || 0);
+    
+    const marketingCosts = data.costs.marketing.isPercentageOfRevenue 
+      ? calculateTotalRevenue(year) * (data.costs.marketing.percentageOfRevenue / 100)
+      : (data.costs.marketing.manualBudget?.[year] || 0);
+    
+    return teamCosts + adminCosts + marketingCosts;
+  };
+
+  const calculateTotalRevenue = (year: 'year1' | 'year2' | 'year3') => {
+    return data.revenueStreams.reduce((sum, stream) => sum + (stream[year] || 0), 0);
+  };
+
+  const calculateDirectCosts = (year: 'year1' | 'year2' | 'year3') => {
+    return Object.values(data.costs.revenueStreamCosts).reduce((sum, stream) => {
+      return sum + Object.values(stream.directCosts).reduce((streamSum, cost) => streamSum + (cost[year] || 0), 0);
+    }, 0);
+  };
+
+  const calculateEBITDA = (year: 'year1' | 'year2' | 'year3') => {
+    const totalRevenue = calculateTotalRevenue(year);
+    const directCosts = calculateDirectCosts(year);
+    const operationalExpenses = calculateOperationalExpenses(year);
+    return totalRevenue - directCosts - operationalExpenses;
   };
 
   const calculateInterestExpense = (year: 'year1' | 'year2' | 'year3') => {
@@ -89,15 +117,14 @@ const Taxation: React.FC<TaxationProps> = ({ data, onUpdateData }) => {
     onUpdateData(updatedData);
   };
 
-  // Prepare chart data
+  // Prepare chart data - only taxation related
   const taxChartData = [1, 2, 3].map(year => {
     const yearKey = `year${year}` as 'year1' | 'year2' | 'year3';
     return {
       year: `Year ${year}`,
-      profitBeforeTax: calculateProfitBeforeTax(yearKey),
       incomeTax: calculateIncomeTax(yearKey),
       zakat: calculateZakat(yearKey),
-      netProfit: calculateProfitBeforeTax(yearKey) - calculateIncomeTax(yearKey) - calculateZakat(yearKey)
+      totalTax: calculateIncomeTax(yearKey) + calculateZakat(yearKey)
     };
   });
 
@@ -181,40 +208,34 @@ const Taxation: React.FC<TaxationProps> = ({ data, onUpdateData }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[1, 2, 3].map(year => {
           const yearKey = `year${year}` as 'year1' | 'year2' | 'year3';
-          const profitBeforeTax = calculateProfitBeforeTax(yearKey);
           const incomeTax = calculateIncomeTax(yearKey);
           const zakat = calculateZakat(yearKey);
           const totalTax = incomeTax + zakat;
-          const netProfit = profitBeforeTax - totalTax;
           
           return (
-            <Card key={year} className="border-l-4 border-l-blue-500">
+            <Card key={year} className="border-l-4 border-l-red-500">
               <CardHeader>
-                <CardTitle className="text-lg">Year {year} Taxation</CardTitle>
+                <CardTitle className="text-lg">Year {year} Tax Summary</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Profit Before Tax:</span>
-                    <span className="font-medium">${profitBeforeTax.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Income Tax:</span>
-                    <span className="font-medium text-red-600">-${incomeTax.toLocaleString()}</span>
+                    <span className="font-medium text-red-600">${incomeTax.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Zakat:</span>
-                    <span className="font-medium text-red-600">-${zakat.toLocaleString()}</span>
+                    <span className="font-medium text-red-600">${zakat.toLocaleString()}</span>
                   </div>
                   <hr className="my-2" />
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Tax:</span>
-                    <span className="font-bold text-red-600">-${totalTax.toLocaleString()}</span>
+                    <span className="text-sm text-gray-600">Total Tax Liability:</span>
+                    <span className="font-bold text-red-600">${totalTax.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Net Profit:</span>
-                    <span className={`font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ${netProfit.toLocaleString()}
+                  <div className="text-center mt-3 p-2 bg-gray-50 rounded-lg">
+                    <span className="text-xs text-gray-500">
+                      Tax Rate: {taxationData.incomeTax.enabled ? `${taxationData.incomeTax.corporateRate}%` : '0%'} Income Tax
+                      {taxationData.zakat.enabled && ` + ${taxationData.zakat.rate}% Zakat`}
                     </span>
                   </div>
                 </div>
@@ -224,10 +245,10 @@ const Taxation: React.FC<TaxationProps> = ({ data, onUpdateData }) => {
         })}
       </div>
 
-      {/* Tax Trend Chart */}
+      {/* Tax Analysis Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Tax and Profit Trend</CardTitle>
+          <CardTitle>Tax Liability Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80">
@@ -237,10 +258,9 @@ const Taxation: React.FC<TaxationProps> = ({ data, onUpdateData }) => {
                 <XAxis dataKey="year" />
                 <YAxis />
                 <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
-                <Bar dataKey="profitBeforeTax" fill="#3b82f6" name="Profit Before Tax" />
                 <Bar dataKey="incomeTax" fill="#ef4444" name="Income Tax" />
                 <Bar dataKey="zakat" fill="#22c55e" name="Zakat" />
-                <Bar dataKey="netProfit" fill="#8b5cf6" name="Net Profit" />
+                <Bar dataKey="totalTax" fill="#f97316" name="Total Tax" />
               </BarChart>
             </ResponsiveContainer>
           </div>

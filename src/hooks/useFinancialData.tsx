@@ -223,19 +223,19 @@ export const useFinancialData = (userId: string | undefined) => {
         const taxData = taxationResult.data[0];
         defaultData.taxation = {
           incomeTax: {
-            enabled: taxData.corporate_tax_rate > 0,
-            corporateRate: taxData.corporate_tax_rate || 0,
-            year1: 0,
-            year2: 0,
-            year3: 0
+            enabled: taxData.income_tax_enabled || false,
+            corporateRate: taxData.income_tax_rate || 20,
+            year1: taxData.income_tax_year1 || 0,
+            year2: taxData.income_tax_year2 || 0,
+            year3: taxData.income_tax_year3 || 0
           },
           zakat: {
-            enabled: taxData.vat_rate > 0,
-            rate: taxData.vat_rate || 0,
-            calculationMethod: 'net-worth',
-            year1: 0,
-            year2: 0,
-            year3: 0
+            enabled: taxData.zakat_enabled || false,
+            rate: taxData.zakat_rate || 2.5,
+            calculationMethod: (taxData.zakat_calculation_method || 'net-worth') as 'net-worth' | 'profit',
+            year1: taxData.zakat_year1 || 0,
+            year2: taxData.zakat_year2 || 0,
+            year3: taxData.zakat_year3 || 0
           }
         };
       }
@@ -328,7 +328,7 @@ export const useFinancialData = (userId: string | undefined) => {
           );
       }
 
-      // Save taxation data
+      // Save taxation data with new structure
       if (data.taxation) {
         // Delete existing taxation first
         await supabase
@@ -336,12 +336,24 @@ export const useFinancialData = (userId: string | undefined) => {
           .delete()
           .eq('financial_model_id', currentModelId);
 
-        // Insert new taxation
+        // Insert new taxation using new columns
         await supabase
           .from('taxation')
           .insert([{
             financial_model_id: currentModelId,
-            corporate_tax_rate: data.taxation.incomeTax.corporateRate,
+            income_tax_enabled: data.taxation.incomeTax.enabled,
+            income_tax_rate: data.taxation.incomeTax.corporateRate,
+            income_tax_year1: data.taxation.incomeTax.year1,
+            income_tax_year2: data.taxation.incomeTax.year2,
+            income_tax_year3: data.taxation.incomeTax.year3,
+            zakat_enabled: data.taxation.zakat.enabled,
+            zakat_rate: data.taxation.zakat.rate,
+            zakat_calculation_method: data.taxation.zakat.calculationMethod,
+            zakat_year1: data.taxation.zakat.year1,
+            zakat_year2: data.taxation.zakat.year2,
+            zakat_year3: data.taxation.zakat.year3,
+            // Keep legacy columns for compatibility
+            legacy_corporate_tax_rate: data.taxation.incomeTax.corporateRate,
             vat_rate: data.taxation.zakat.rate,
             other_taxes: 0
           }]);
@@ -432,7 +444,19 @@ export const useFinancialData = (userId: string | undefined) => {
           .from('taxation')
           .insert([{
             financial_model_id: currentModelId,
-            corporate_tax_rate: data.incomeTax.corporateRate,
+            income_tax_enabled: data.incomeTax.enabled,
+            income_tax_rate: data.incomeTax.corporateRate,
+            income_tax_year1: data.incomeTax.year1,
+            income_tax_year2: data.incomeTax.year2,
+            income_tax_year3: data.incomeTax.year3,
+            zakat_enabled: data.zakat.enabled,
+            zakat_rate: data.zakat.rate,
+            zakat_calculation_method: data.zakat.calculationMethod,
+            zakat_year1: data.zakat.year1,
+            zakat_year2: data.zakat.year2,
+            zakat_year3: data.zakat.year3,
+            // Keep legacy columns for compatibility
+            legacy_corporate_tax_rate: data.incomeTax.corporateRate,
             vat_rate: data.zakat.rate,
             other_taxes: 0
           }]);
