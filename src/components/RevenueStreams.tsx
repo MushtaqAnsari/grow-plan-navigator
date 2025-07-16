@@ -185,8 +185,7 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
   const addRevenueStream = () => {
     if (newStream.name) {
       const calculatedStream = calculateRevenue(newStream);
-      // Send only the new stream, let parent handle array management
-      onChange([calculatedStream]);
+      onChange([...data, calculatedStream]);
       setNewStream(getEmptyStream());
     }
   };
@@ -503,19 +502,15 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
   );
 
   const removeRevenueStream = (index: number) => {
-    // Note: This function should probably be handled differently in the parent component
-    // For now, keeping the existing structure but this needs to be refactored
     const updatedData = data.filter((_, i) => i !== index);
-    onChange(updatedData as any);
+    onChange(updatedData);
   };
 
   const updateRevenueStream = (index: number, field: keyof RevenueStream, value: string | number) => {
-    // Note: This function should probably be handled differently in the parent component
-    // For now, keeping the existing structure but this needs to be refactored
     const updatedData = data.map((stream, i) => 
       i === index ? { ...stream, [field]: value } : stream
     );
-    onChange(updatedData as any);
+    onChange(updatedData);
   };
 
   const totalRevenue = (year: 'year1' | 'year2' | 'year3') => {
