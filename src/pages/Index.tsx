@@ -12,6 +12,7 @@ import BalanceSheet from "@/components/BalanceSheet";
 import CompanySetup from "@/components/CompanySetup";
 import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useFinancialData } from "@/hooks/useFinancialData";
 
 export interface FinancialData {
   revenueStreams: {
@@ -194,112 +195,33 @@ export interface FinancialData {
 
 const Index = () => {
   const { user, signOut } = useAuth();
+  const { financialData, loading, updateFinancialData } = useFinancialData(user?.id);
   const [industry, setIndustry] = useState<string>("");
   const [companyData, setCompanyData] = useState<any>(null);
-  const [financialData, setFinancialData] = useState<FinancialData>({
-    revenueStreams: [
-      {
-        name: "Revenue Stream 1",
-        type: "saas",
-        year1: 0,
-        year2: 0,
-        year3: 0,
-        growthRate: 0,
-        arDays: 0
-      }
-    ],
-    costs: {
-      revenueStreamCosts: {},
-      team: {
-        employees: [],
-        consultants: [],
-        healthCare: { amount: 0, percentage: 0 },
-        benefits: { amount: 0, percentage: 0 },
-        iqama: { amount: 0, percentage: 0 },
-        recruitment: { year1: 0, year2: 0, year3: 0 }
-      },
-      admin: {
-        rent: { 
-          monthlyAmount: 0, 
-          utilitiesPercentage: 0, 
-          year1: 0, year2: 0, year3: 0 
-        },
-        travel: {
-          tripsPerMonth: 0,
-          domesticCostPerTrip: 0,
-          internationalCostPerTrip: 0,
-          domesticTripsRatio: 0,
-          year1: 0, year2: 0, year3: 0
-        },
-        insurance: { 
-          percentageOfAssets: 0, 
-          year1: 0, year2: 0, year3: 0 
-        },
-        legal: { year1: 0, year2: 0, year3: 0 },
-        accounting: { year1: 0, year2: 0, year3: 0 },
-        software: {
-          items: [],
-          year1: 0, year2: 0, year3: 0
-        },
-        other: { year1: 0, year2: 0, year3: 0 }
-      },
-      balanceSheet: {
-        fixedAssets: {
-          assets: [],
-          year1: 0, year2: 0, year3: 0
-        },
-        accountsReceivable: {
-          revenueStreamARs: {},
-          totalYear1: 0,
-          totalYear2: 0,
-          totalYear3: 0
-        },
-        accountsPayable: {
-          daysForPayment: 0,
-          year1: 0, year2: 0, year3: 0
-        },
-        cashAndBank: { year1: 0, year2: 0, year3: 0 },
-        inventory: { year1: 0, year2: 0, year3: 0 },
-        otherAssets: { year1: 0, year2: 0, year3: 0 },
-        otherLiabilities: { year1: 0, year2: 0, year3: 0 }
-      },
-      marketing: {
-        isPercentageOfRevenue: false,
-        percentageOfRevenue: 0,
-        manualBudget: { year1: 0, year2: 0, year3: 0 },
-        digitalAdvertising: { year1: 0, year2: 0, year3: 0 },
-        contentCreation: { year1: 0, year2: 0, year3: 0 },
-        events: { year1: 0, year2: 0, year3: 0 },
-        pr: { year1: 0, year2: 0, year3: 0 },
-        brandingDesign: { year1: 0, year2: 0, year3: 0 },
-        tools: { year1: 0, year2: 0, year3: 0 },
-        other: { year1: 0, year2: 0, year3: 0 }
-      }
-    },
-    loansAndFinancing: {
-      loans: [],
-      totalInterestExpense: {
-        year1: 0,
-        year2: 0, 
-        year3: 0
-      }
-    },
-    employees: [],
-    funding: {
-      totalFunding: 0,
-      burnRate: 0,
-      useOfFunds: []
-    }
-  });
-
   const [activeTab, setActiveTab] = useState("income-statement");
 
-  const updateFinancialData = (section: keyof FinancialData, data: any) => {
-    setFinancialData(prev => ({
-      ...prev,
-      [section]: data
-    }));
-  };
+  // Show loading while data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading your financial data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if no financial data yet
+  if (!financialData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-slate-600">Unable to load financial data. Please try again.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -439,7 +361,12 @@ const Index = () => {
             <TabsContent value="income-statement">
               <IncomeStatement 
                 data={financialData}
-                onUpdateData={setFinancialData}
+                onUpdateData={(newData) => {
+                  // Update the entire financial data object
+                  Object.keys(newData).forEach(key => {
+                    updateFinancialData(key as keyof FinancialData, newData[key as keyof FinancialData]);
+                  });
+                }}
               />
             </TabsContent>
 
