@@ -18,13 +18,29 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
 
   const calculateTotalCosts = (year: number) => {
     const yearKey = `year${year}` as 'year1' | 'year2' | 'year3';
-    return Object.values(data.costs).reduce((sum, category) => sum + category[yearKey], 0);
+    
+    // Sum all direct costs from revenue streams
+    const directCosts = Object.values(data.costs.revenueStreamCosts).reduce((sum, stream) => {
+      return sum + Object.values(stream.directCosts).reduce((streamSum, cost) => streamSum + cost[yearKey], 0);
+    }, 0);
+    
+    // Sum all overhead costs
+    const overheadCosts = Object.values(data.costs.overhead).reduce((sum, cost) => sum + cost[yearKey], 0);
+    
+    return directCosts + overheadCosts;
   };
 
   const calculatePayroll = (year: number) => {
     return data.employees
       .filter(emp => emp.year <= year)
       .reduce((sum, emp) => sum + (emp.count * emp.salary), 0);
+  };
+
+  const calculateDirectCosts = (year: number) => {
+    const yearKey = `year${year}` as 'year1' | 'year2' | 'year3';
+    return Object.values(data.costs.revenueStreamCosts).reduce((sum, stream) => {
+      return sum + Object.values(stream.directCosts).reduce((streamSum, cost) => streamSum + cost[yearKey], 0);
+    }, 0);
   };
 
   // Prepare data for charts
@@ -38,16 +54,17 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
 
   const profitLossData = [1, 2, 3].map(year => {
     const revenue = calculateTotalRevenue(year);
+    const directCosts = calculateDirectCosts(year);
     const costs = calculateTotalCosts(year);
     const payroll = calculatePayroll(year);
-    const grossProfit = revenue - data.costs.cogs[`year${year}` as 'year1' | 'year2' | 'year3'];
-    const operatingExpenses = costs - data.costs.cogs[`year${year}` as 'year1' | 'year2' | 'year3'] + payroll;
+    const grossProfit = revenue - directCosts;
+    const operatingExpenses = costs - directCosts + payroll;
     const netIncome = grossProfit - operatingExpenses;
 
     return {
       year,
       revenue,
-      cogs: data.costs.cogs[`year${year}` as 'year1' | 'year2' | 'year3'],
+      cogs: directCosts,
       grossProfit,
       operatingExpenses,
       netIncome,

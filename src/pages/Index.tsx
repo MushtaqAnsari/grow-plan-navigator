@@ -22,11 +22,25 @@ export interface FinancialData {
     growthRate: number;
   }[];
   costs: {
-    cogs: { year1: number; year2: number; year3: number; };
-    payroll: { year1: number; year2: number; year3: number; };
-    admin: { year1: number; year2: number; year3: number; };
-    marketing: { year1: number; year2: number; year3: number; };
-    other: { year1: number; year2: number; year3: number; };
+    // Revenue stream linked costs
+    revenueStreamCosts: {
+      [key: string]: { // Revenue stream name as key
+        directCosts: {
+          cogs: { year1: number; year2: number; year3: number; };
+          processing: { year1: number; year2: number; year3: number; };
+          fulfillment: { year1: number; year2: number; year3: number; };
+          support: { year1: number; year2: number; year3: number; };
+        };
+      };
+    };
+    // General overhead costs not tied to specific revenue
+    overhead: {
+      payroll: { year1: number; year2: number; year3: number; };
+      admin: { year1: number; year2: number; year3: number; };
+      marketing: { year1: number; year2: number; year3: number; };
+      facilities: { year1: number; year2: number; year3: number; };
+      other: { year1: number; year2: number; year3: number; };
+    };
   };
   employees: {
     role: string;
@@ -50,11 +64,14 @@ const Index = () => {
   const [financialData, setFinancialData] = useState<FinancialData>({
     revenueStreams: [],
     costs: {
-      cogs: { year1: 0, year2: 0, year3: 0 },
-      payroll: { year1: 0, year2: 0, year3: 0 },
-      admin: { year1: 0, year2: 0, year3: 0 },
-      marketing: { year1: 0, year2: 0, year3: 0 },
-      other: { year1: 0, year2: 0, year3: 0 }
+      revenueStreamCosts: {},
+      overhead: {
+        payroll: { year1: 0, year2: 0, year3: 0 },
+        admin: { year1: 0, year2: 0, year3: 0 },
+        marketing: { year1: 0, year2: 0, year3: 0 },
+        facilities: { year1: 0, year2: 0, year3: 0 },
+        other: { year1: 0, year2: 0, year3: 0 }
+      }
     },
     employees: [],
     funding: {
@@ -165,6 +182,7 @@ const Index = () => {
                 <CostStructure 
                   data={financialData.costs}
                   onChange={(data) => updateFinancialData('costs', data)}
+                  revenueStreams={financialData.revenueStreams}
                 />
               </CardContent>
             </Card>
