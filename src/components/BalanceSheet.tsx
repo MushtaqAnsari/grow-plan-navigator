@@ -217,9 +217,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
           )}
 
           <div className="space-y-4">
-            {data.fixedAssets.assets
-              .filter(asset => asset.name || asset.cost > 0) // Only show assets with name or cost
-              .map((asset, index) => (
+            {data.fixedAssets.assets.map((asset, index) => (
               <Card key={asset.id} className={`border-l-4 ${asset.assetClass === 'tangible' ? 'border-blue-500' : 'border-purple-500'}`}>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2 mb-4">
@@ -295,7 +293,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
               </Card>
             ))}
             
-            {data.fixedAssets.assets.filter(asset => asset.name || asset.cost > 0).length === 0 && (
+            {data.fixedAssets.assets.length === 0 && (
               <Card className="border-dashed border-2 border-gray-300">
                 <CardContent className="pt-6 text-center">
                   <div className="text-gray-500 mb-2">
