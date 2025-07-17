@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FinancialData } from "@/pages/Index";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { TrendingUp, TrendingDown, AlertCircle, CheckCircle, Target, DollarSign, Percent, Calendar, Brain, Loader2 } from 'lucide-react';
-import { formatCurrency, formatPercentage } from "@/lib/utils";
+import { formatCurrency, formatPercentage, formatNumber } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -252,7 +252,7 @@ const Analysis: React.FC<AnalysisProps> = ({ data }) => {
                       ? formatCurrency(metric.value)
                       : metric.format === 'year'
                       ? metric.value <= 3 ? `Year ${metric.value}` : 'Beyond Y3'
-                      : metric.value.toFixed(1)
+                      : formatNumber(metric.value)
                     }
                   </div>
                   <div className="text-sm text-gray-600">{metric.title}</div>

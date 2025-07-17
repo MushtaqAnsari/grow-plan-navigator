@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { formatCurrency } from "@/lib/utils";
 
 interface TaxationProps {
   data: FinancialData;
@@ -221,16 +222,16 @@ const Taxation: React.FC<TaxationProps> = ({ data, onUpdateData }) => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Income Tax:</span>
-                    <span className="font-medium text-red-600">${incomeTax.toLocaleString()}</span>
+                    <span className="font-medium text-red-600">{formatCurrency(incomeTax)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Zakat:</span>
-                    <span className="font-medium text-red-600">${zakat.toLocaleString()}</span>
+                    <span className="font-medium text-red-600">{formatCurrency(zakat)}</span>
                   </div>
                   <hr className="my-2" />
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Total Tax Liability:</span>
-                    <span className="font-bold text-red-600">${totalTax.toLocaleString()}</span>
+                    <span className="font-bold text-red-600">{formatCurrency(totalTax)}</span>
                   </div>
                   <div className="text-center mt-3 p-2 bg-gray-50 rounded-lg">
                     <span className="text-xs text-gray-500">
@@ -257,7 +258,7 @@ const Taxation: React.FC<TaxationProps> = ({ data, onUpdateData }) => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" />
                 <YAxis />
-                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
+                <Tooltip formatter={(value: number) => [formatCurrency(value), '']} />
                 <Bar dataKey="incomeTax" fill="#ef4444" name="Income Tax" />
                 <Bar dataKey="zakat" fill="#22c55e" name="Zakat" />
                 <Bar dataKey="totalTax" fill="#f97316" name="Total Tax" />
@@ -284,13 +285,13 @@ const Taxation: React.FC<TaxationProps> = ({ data, onUpdateData }) => {
                     innerRadius={60}
                     outerRadius={120}
                     dataKey="value"
-                    label={({ name, value }) => `${name}: $${value.toLocaleString()}`}
+                    label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
                   >
                     {year3TaxBreakdown.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
+                  <Tooltip formatter={(value: number) => [formatCurrency(value), '']} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

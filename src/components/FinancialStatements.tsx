@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Percent, BarChart3, FileText, Calculator } from 'lucide-react';
 import { FinancialData } from "@/pages/Index";
+import { formatCurrency, formatPercentage } from "@/lib/utils";
 
 interface FinancialStatementsProps {
   data: FinancialData;
@@ -193,50 +194,50 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                     <tbody>
                       <tr className="border-b">
                         <td className="py-2 font-medium">Revenue</td>
-                        <td className="text-right py-2">${plData[0]?.revenue.toLocaleString()}</td>
-                        <td className="text-right py-2">${plData[1]?.revenue.toLocaleString()}</td>
-                        <td className="text-right py-2">${plData[2]?.revenue.toLocaleString()}</td>
+                        <td className="text-right py-2">{formatCurrency(plData[0]?.revenue)}</td>
+                        <td className="text-right py-2">{formatCurrency(plData[1]?.revenue)}</td>
+                        <td className="text-right py-2">{formatCurrency(plData[2]?.revenue)}</td>
                       </tr>
                       <tr className="border-b">
                         <td className="py-2">Direct Costs</td>
-                        <td className="text-right py-2 text-red-600">-${plData[0]?.directCosts.toLocaleString()}</td>
-                        <td className="text-right py-2 text-red-600">-${plData[1]?.directCosts.toLocaleString()}</td>
-                        <td className="text-right py-2 text-red-600">-${plData[2]?.directCosts.toLocaleString()}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[0]?.directCosts)}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[1]?.directCosts)}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[2]?.directCosts)}</td>
                       </tr>
                       <tr className="border-b bg-gray-50">
                         <td className="py-2 font-medium">Gross Profit</td>
-                        <td className="text-right py-2 font-medium">${plData[0]?.grossProfit.toLocaleString()}</td>
-                        <td className="text-right py-2 font-medium">${plData[1]?.grossProfit.toLocaleString()}</td>
-                        <td className="text-right py-2 font-medium">${plData[2]?.grossProfit.toLocaleString()}</td>
+                        <td className="text-right py-2 font-medium">{formatCurrency(plData[0]?.grossProfit)}</td>
+                        <td className="text-right py-2 font-medium">{formatCurrency(plData[1]?.grossProfit)}</td>
+                        <td className="text-right py-2 font-medium">{formatCurrency(plData[2]?.grossProfit)}</td>
                       </tr>
                       <tr className="border-b">
                         <td className="py-2">Team Costs</td>
-                        <td className="text-right py-2 text-red-600">-${plData[0]?.teamCosts.toLocaleString()}</td>
-                        <td className="text-right py-2 text-red-600">-${plData[1]?.teamCosts.toLocaleString()}</td>
-                        <td className="text-right py-2 text-red-600">-${plData[2]?.teamCosts.toLocaleString()}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[0]?.teamCosts)}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[1]?.teamCosts)}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[2]?.teamCosts)}</td>
                       </tr>
                       <tr className="border-b">
                         <td className="py-2">Admin Costs</td>
-                        <td className="text-right py-2 text-red-600">-${plData[0]?.adminCosts.toLocaleString()}</td>
-                        <td className="text-right py-2 text-red-600">-${plData[1]?.adminCosts.toLocaleString()}</td>
-                        <td className="text-right py-2 text-red-600">-${plData[2]?.adminCosts.toLocaleString()}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[0]?.adminCosts)}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[1]?.adminCosts)}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[2]?.adminCosts)}</td>
                       </tr>
                       <tr className="border-b">
                         <td className="py-2">Marketing Costs</td>
-                        <td className="text-right py-2 text-red-600">-${plData[0]?.marketingCosts.toLocaleString()}</td>
-                        <td className="text-right py-2 text-red-600">-${plData[1]?.marketingCosts.toLocaleString()}</td>
-                        <td className="text-right py-2 text-red-600">-${plData[2]?.marketingCosts.toLocaleString()}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[0]?.marketingCosts)}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[1]?.marketingCosts)}</td>
+                        <td className="text-right py-2 text-red-600">-{formatCurrency(plData[2]?.marketingCosts)}</td>
                       </tr>
                       <tr className="border-b bg-blue-50">
                         <td className="py-2 font-bold">EBITDA</td>
                         <td className={`text-right py-2 font-bold ${plData[0]?.ebitda >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          ${plData[0]?.ebitda.toLocaleString()}
+                          {formatCurrency(plData[0]?.ebitda)}
                         </td>
                         <td className={`text-right py-2 font-bold ${plData[1]?.ebitda >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          ${plData[1]?.ebitda.toLocaleString()}
+                          {formatCurrency(plData[1]?.ebitda)}
                         </td>
                         <td className={`text-right py-2 font-bold ${plData[2]?.ebitda >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          ${plData[2]?.ebitda.toLocaleString()}
+                          {formatCurrency(plData[2]?.ebitda)}
                         </td>
                       </tr>
                     </tbody>
@@ -257,7 +258,7 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="year" />
                       <YAxis />
-                      <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                      <Tooltip formatter={(value: number) => [formatCurrency(value)]} />
                       <Legend />
                       <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} name="Revenue" />
                       <Line type="monotone" dataKey="ebitda" stroke="#82ca9d" strokeWidth={2} name="EBITDA" />
@@ -292,7 +293,7 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                      <Tooltip formatter={(value: number) => [formatCurrency(value)]} />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -307,9 +308,9 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                     <Percent className="h-4 w-4 text-muted-foreground" />
                     <div className="ml-2">
                       <p className="text-xs font-medium text-muted-foreground">Avg Gross Margin</p>
-                      <p className="text-2xl font-bold">
-                        {((plData[0]?.grossMargin + plData[1]?.grossMargin + plData[2]?.grossMargin) / 3).toFixed(1)}%
-                      </p>
+                       <p className="text-2xl font-bold">
+                        {formatPercentage((plData[0]?.grossMargin + plData[1]?.grossMargin + plData[2]?.grossMargin) / 3)}
+                       </p>
                     </div>
                   </div>
                 </CardContent>
@@ -320,9 +321,9 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     <div className="ml-2">
                       <p className="text-xs font-medium text-muted-foreground">Revenue Growth</p>
-                      <p className="text-2xl font-bold">
-                        {plData[1]?.revenue > 0 ? (((plData[2]?.revenue - plData[0]?.revenue) / plData[0]?.revenue) * 100).toFixed(1) : 0}%
-                      </p>
+                       <p className="text-2xl font-bold">
+                        {plData[1]?.revenue > 0 ? formatPercentage(((plData[2]?.revenue - plData[0]?.revenue) / plData[0]?.revenue) * 100) : "0%"}
+                       </p>
                     </div>
                   </div>
                 </CardContent>
@@ -333,9 +334,9 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                     <div className="ml-2">
                       <p className="text-xs font-medium text-muted-foreground">Year 3 EBITDA</p>
-                      <p className={`text-2xl font-bold ${plData[2]?.ebitda >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ${plData[2]?.ebitda.toLocaleString()}
-                      </p>
+                       <p className={`text-2xl font-bold ${plData[2]?.ebitda >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(plData[2]?.ebitda)}
+                       </p>
                     </div>
                   </div>
                 </CardContent>
@@ -346,9 +347,9 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                     <BarChart3 className="h-4 w-4 text-muted-foreground" />
                     <div className="ml-2">
                       <p className="text-xs font-medium text-muted-foreground">EBITDA Margin Y3</p>
-                      <p className="text-2xl font-bold">
-                        {plData[2]?.ebitdaMargin.toFixed(1)}%
-                      </p>
+                       <p className="text-2xl font-bold">
+                        {formatPercentage(plData[2]?.ebitdaMargin)}
+                       </p>
                     </div>
                   </div>
                 </CardContent>
@@ -367,7 +368,7 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                       Gross Margin
                     </Badge>
                     <p>
-                      Your gross margin of {plData[2]?.grossMargin.toFixed(1)}% in Year 3 is{" "}
+                      Your gross margin of {formatPercentage(plData[2]?.grossMargin)} in Year 3 is{" "}
                       {plData[2]?.grossMargin > 70 ? "excellent" : plData[2]?.grossMargin > 50 ? "healthy" : "concerning"}.
                       {plData[2]?.grossMargin > 70 && " This indicates strong pricing power and efficient cost management."}
                       {plData[2]?.grossMargin > 50 && plData[2]?.grossMargin <= 70 && " Focus on optimizing direct costs for improvement."}
@@ -380,8 +381,8 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                     </Badge>
                     <p>
                       {plData[2]?.ebitda > 0 
-                        ? `Achieving positive EBITDA of $${plData[2]?.ebitda.toLocaleString()} demonstrates operational efficiency and path to profitability.`
-                        : `Current EBITDA of $${plData[2]?.ebitda.toLocaleString()} indicates need for revenue growth or cost optimization.`
+                        ? `Achieving positive EBITDA of ${formatCurrency(plData[2]?.ebitda)} demonstrates operational efficiency and path to profitability.`
+                        : `Current EBITDA of ${formatCurrency(plData[2]?.ebitda)} indicates need for revenue growth or cost optimization.`
                       }
                     </p>
                   </div>
@@ -389,7 +390,7 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                     <Badge variant="outline">Growth</Badge>
                     <p>
                       Revenue growth trajectory shows{" "}
-                      {((plData[2]?.revenue - plData[0]?.revenue) / plData[0]?.revenue * 100).toFixed(1)}% total growth over 3 years.
+                      {formatPercentage((plData[2]?.revenue - plData[0]?.revenue) / plData[0]?.revenue * 100)} total growth over 3 years.
                       {((plData[2]?.revenue - plData[0]?.revenue) / plData[0]?.revenue * 100) > 100 
                         ? " This strong growth rate positions the company well for scaling."
                         : " Consider strategies to accelerate revenue growth."}
@@ -425,15 +426,15 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                       <tbody>
                         <tr className="border-b">
                           <td className="py-2">Fixed Assets</td>
-                          <td className="text-right py-2">${bsData[0]?.fixedAssets.toLocaleString()}</td>
-                          <td className="text-right py-2">${bsData[1]?.fixedAssets.toLocaleString()}</td>
-                          <td className="text-right py-2">${bsData[2]?.fixedAssets.toLocaleString()}</td>
+                          <td className="text-right py-2">{formatCurrency(bsData[0]?.fixedAssets)}</td>
+                          <td className="text-right py-2">{formatCurrency(bsData[1]?.fixedAssets)}</td>
+                          <td className="text-right py-2">{formatCurrency(bsData[2]?.fixedAssets)}</td>
                         </tr>
                         <tr className="border-b">
                           <td className="py-2">Accounts Receivable</td>
-                          <td className="text-right py-2">${bsData[0]?.accountsReceivable.toLocaleString()}</td>
-                          <td className="text-right py-2">${bsData[1]?.accountsReceivable.toLocaleString()}</td>
-                          <td className="text-right py-2">${bsData[2]?.accountsReceivable.toLocaleString()}</td>
+                          <td className="text-right py-2">{formatCurrency(bsData[0]?.accountsReceivable)}</td>
+                          <td className="text-right py-2">{formatCurrency(bsData[1]?.accountsReceivable)}</td>
+                          <td className="text-right py-2">{formatCurrency(bsData[2]?.accountsReceivable)}</td>
                         </tr>
                         <tr className="border-b">
                           <td className="py-2">Cash & Bank</td>
@@ -455,9 +456,9 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                         </tr>
                         <tr className="border-b bg-blue-50">
                           <td className="py-2 font-bold">TOTAL ASSETS</td>
-                          <td className="text-right py-2 font-bold">${bsData[0]?.totalAssets.toLocaleString()}</td>
-                          <td className="text-right py-2 font-bold">${bsData[1]?.totalAssets.toLocaleString()}</td>
-                          <td className="text-right py-2 font-bold">${bsData[2]?.totalAssets.toLocaleString()}</td>
+                          <td className="text-right py-2 font-bold">{formatCurrency(bsData[0]?.totalAssets)}</td>
+                          <td className="text-right py-2 font-bold">{formatCurrency(bsData[1]?.totalAssets)}</td>
+                          <td className="text-right py-2 font-bold">{formatCurrency(bsData[2]?.totalAssets)}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -542,7 +543,7 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                      <Tooltip formatter={(value: number) => [formatCurrency(value)]} />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -558,7 +559,7 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="year" />
                       <YAxis />
-                      <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                      <Tooltip formatter={(value: number) => [formatCurrency(value)]} />
                       <Legend />
                       <Bar dataKey="totalAssets" fill="#8884d8" name="Total Assets" />
                       <Bar dataKey="totalLiabilities" fill="#ff7300" name="Total Liabilities" />
@@ -604,7 +605,7 @@ const FinancialStatements: React.FC<FinancialStatementsProps> = ({ data }) => {
                     <div className="ml-2">
                       <p className="text-xs font-medium text-muted-foreground">Total Assets Y3</p>
                       <p className="text-2xl font-bold">
-                        ${bsData[2]?.totalAssets.toLocaleString()}
+                        {formatCurrency(bsData[2]?.totalAssets)}
                       </p>
                     </div>
                   </div>

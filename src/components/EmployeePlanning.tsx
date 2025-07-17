@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2 } from 'lucide-react';
+import { formatCurrency } from "@/lib/utils";
 
 interface Employee {
   role: string;
@@ -219,7 +220,7 @@ const EmployeePlanning: React.FC<EmployeePlanningProps> = ({ data, onChange }) =
               </div>
             </div>
             <div className="mt-3 text-sm text-gray-600">
-              Total Cost: ${(employee.count * employee.salary).toLocaleString()} annually
+              Total Cost: {formatCurrency(employee.count * employee.salary)} annually
             </div>
           </CardContent>
         </Card>
@@ -240,7 +241,7 @@ const EmployeePlanning: React.FC<EmployeePlanningProps> = ({ data, onChange }) =
                   </p>
                   <p className="text-sm text-blue-700 mb-2">Employees</p>
                   <p className="text-xl font-semibold text-blue-800">
-                    ${getPayrollByYear(year).toLocaleString()}
+                    {formatCurrency(getPayrollByYear(year))}
                   </p>
                   <p className="text-xs text-blue-600">Year {year} Payroll</p>
                 </div>
