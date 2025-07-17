@@ -77,6 +77,20 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
         setShowIPDialog(true);
       }
     }
+
+    // Check if we're capitalizing an employee as IP
+    if (field === 'isCapitalized' && value === true) {
+      const employee = updatedEmployees.find(emp => emp.id === id);
+      if (employee && employee.department === 'technology' && employee.salary > 0) {
+        const assetName = `Inhouse Development - ${employee.designation || 'Technology Role'}`;
+        const assetCost = employee.salary * 0.3; // 30% of annual salary for IP development
+        
+        // Directly add the intangible asset if callback provided
+        if (onAddIntangibleAsset) {
+          onAddIntangibleAsset(assetName, assetCost);
+        }
+      }
+    }
     
     onChange({
       ...data,
