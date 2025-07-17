@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { formatCurrency } from "@/lib/utils";
 
 interface RevenueStream {
   name: string;
@@ -417,9 +418,9 @@ const CostStructure: React.FC<CostStructureProps> = ({ data, onChange, revenueSt
                     onChange={(e) => updateMarketingPercentage(Number(e.target.value))}
                   />
                   <div className="mt-2 text-sm text-gray-600">
-                    <p>Year 1: ${getMarketingBudget('year1').toLocaleString()}</p>
-                    <p>Year 2: ${getMarketingBudget('year2').toLocaleString()}</p>
-                    <p>Year 3: ${getMarketingBudget('year3').toLocaleString()}</p>
+                    <p>Year 1: {formatCurrency(getMarketingBudget('year1'))}</p>
+                    <p>Year 2: {formatCurrency(getMarketingBudget('year2'))}</p>
+                    <p>Year 3: {formatCurrency(getMarketingBudget('year3'))}</p>
                   </div>
                 </div>
               ) : (
@@ -514,19 +515,19 @@ const CostStructure: React.FC<CostStructureProps> = ({ data, onChange, revenueSt
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-red-600">
-                ${getTotalCosts('year1').toLocaleString()}
+                {formatCurrency(getTotalCosts('year1'))}
               </p>
               <p className="text-sm text-red-700">Year 1</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-red-600">
-                ${getTotalCosts('year2').toLocaleString()}
+                {formatCurrency(getTotalCosts('year2'))}
               </p>
               <p className="text-sm text-red-700">Year 2</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-red-600">
-                ${getTotalCosts('year3').toLocaleString()}
+                {formatCurrency(getTotalCosts('year3'))}
               </p>
               <p className="text-sm text-red-700">Year 3</p>
             </div>

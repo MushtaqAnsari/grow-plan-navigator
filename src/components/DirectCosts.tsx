@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Save } from 'lucide-react';
 import { FinancialData } from "@/pages/Index";
+import { formatCurrency } from "@/lib/utils";
 
 interface RevenueStream {
   name: string;
@@ -316,7 +317,7 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
                 return (
                   <div key={year} className="text-center">
                     <div className="text-2xl font-bold text-blue-600">
-                      ${totals[year as keyof typeof totals].toLocaleString()}
+                      {formatCurrency(totals[year as keyof typeof totals])}
                     </div>
                     <div className="text-sm text-blue-700">Year {index + 1}</div>
                   </div>

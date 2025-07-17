@@ -10,6 +10,7 @@ import { Plus, Trash2, Building, CreditCard, Banknote, Package } from "lucide-re
 import { FinancialData } from "@/pages/Index";
 import { useFinancialData } from "@/hooks/useFinancialData";
 import { useAuth } from "@/hooks/useAuth";
+import { formatCurrency } from "@/lib/utils";
 
 interface BalanceSheetProps {
   data: FinancialData['costs']['balanceSheet'];
@@ -215,13 +216,13 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                       <div className="flex justify-between">
                         <span>Total Cost:</span>
                         <span className="font-medium">
-                          ${data.fixedAssets.assets.reduce((sum, asset) => sum + (asset.cost || 0), 0).toLocaleString()}
+                          {formatCurrency(data.fixedAssets.assets.reduce((sum, asset) => sum + (asset.cost || 0), 0))}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Annual Depreciation:</span>
                         <span className="font-medium">
-                          ${data.fixedAssets.assets.reduce((sum, asset) => sum + ((asset.cost || 0) / (asset.usefulLife || 1)), 0).toLocaleString()}
+                          {formatCurrency(data.fixedAssets.assets.reduce((sum, asset) => sum + ((asset.cost || 0) / (asset.usefulLife || 1)), 0))}
                         </span>
                       </div>
                     </div>
@@ -292,7 +293,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                     <div className="text-xs text-gray-500">
                       <div>Annual Depreciation:</div>
                       <div className="font-medium text-gray-700">
-                        ${((asset.cost || 0) / (asset.usefulLife || 1)).toLocaleString()}
+                        {formatCurrency((asset.cost || 0) / (asset.usefulLife || 1))}
                       </div>
                     </div>
                     <Button
@@ -336,7 +337,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                     <div className="text-sm space-y-1">
                       <div className="flex justify-between">
                         <span>Net Book Value:</span>
-                        <span className="font-medium">${data.fixedAssets[year as 'year1' | 'year2' | 'year3'].toLocaleString()}</span>
+                        <span className="font-medium">{formatCurrency(data.fixedAssets[year as 'year1' | 'year2' | 'year3'])}</span>
                       </div>
                     </div>
                   </div>
@@ -385,12 +386,12 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                           <Label className="text-xs text-gray-500 mb-1 block">Year 1 AR ($)</Label>
                           <Input
                             type="number"
-                            value={data.accountsReceivable.revenueStreamARs[stream.name]?.year1?.toLocaleString() || '0'}
+                            value={formatCurrency(data.accountsReceivable.revenueStreamARs[stream.name]?.year1 || 0)}
                             readOnly
                             className="h-8 bg-gray-50"
                           />
                           <p className="text-xs text-green-600 mt-1">
-                            Revenue: ${stream.year1?.toLocaleString() || '0'}
+                            Revenue: {formatCurrency(stream.year1 || 0)}
                           </p>
                         </div>
                         
@@ -398,12 +399,12 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                           <Label className="text-xs text-gray-500 mb-1 block">Year 2 AR ($)</Label>
                           <Input
                             type="number"
-                            value={data.accountsReceivable.revenueStreamARs[stream.name]?.year2?.toLocaleString() || '0'}
+                            value={formatCurrency(data.accountsReceivable.revenueStreamARs[stream.name]?.year2 || 0)}
                             readOnly
                             className="h-8 bg-gray-50"
                           />
                           <p className="text-xs text-green-600 mt-1">
-                            Revenue: ${stream.year2?.toLocaleString() || '0'}
+                            Revenue: {formatCurrency(stream.year2 || 0)}
                           </p>
                         </div>
                         
@@ -411,12 +412,12 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                           <Label className="text-xs text-gray-500 mb-1 block">Year 3 AR ($)</Label>
                           <Input
                             type="number"
-                            value={data.accountsReceivable.revenueStreamARs[stream.name]?.year3?.toLocaleString() || '0'}
+                            value={formatCurrency(data.accountsReceivable.revenueStreamARs[stream.name]?.year3 || 0)}
                             readOnly
                             className="h-8 bg-gray-50"
                           />
                           <p className="text-xs text-green-600 mt-1">
-                            Revenue: ${stream.year3?.toLocaleString() || '0'}
+                            Revenue: {formatCurrency(stream.year3 || 0)}
                           </p>
                         </div>
                       </div>
@@ -438,7 +439,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                           {year === 'year1' ? 'Year 1 ($)' : year === 'year2' ? 'Year 2 ($)' : 'Year 3 ($)'}
                         </Label>
                         <div className="text-lg font-semibold text-green-700">
-                          ${data.accountsReceivable[`total${year.charAt(0).toUpperCase() + year.slice(1)}` as keyof typeof data.accountsReceivable].toLocaleString()}
+                          {formatCurrency(data.accountsReceivable[`total${year.charAt(0).toUpperCase() + year.slice(1)}` as 'totalYear1' | 'totalYear2' | 'totalYear3'])}
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
                           Combined from {revenueStreams.length} revenue stream{revenueStreams.length !== 1 ? 's' : ''}
@@ -651,15 +652,15 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
                       <div className="text-sm space-y-1">
                         <div className="flex justify-between">
                           <span>Total Assets:</span>
-                          <span className="font-medium">${totalAssets.toLocaleString()}</span>
+                          <span className="font-medium">{formatCurrency(totalAssets)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Total Liabilities:</span>
-                          <span className="font-medium">${totalLiabilities.toLocaleString()}</span>
+                          <span className="font-medium">{formatCurrency(totalLiabilities)}</span>
                         </div>
                         <div className="flex justify-between border-t pt-1">
                           <span>Equity:</span>
-                          <span className="font-medium">${equity.toLocaleString()}</span>
+                          <span className="font-medium">{formatCurrency(equity)}</span>
                         </div>
                       </div>
                     </div>
