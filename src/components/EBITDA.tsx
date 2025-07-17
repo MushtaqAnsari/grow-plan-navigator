@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FinancialData } from "@/pages/Index";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { formatCurrency, formatPercentage } from "@/lib/utils";
 
 interface EBITDAProps {
   data: FinancialData;
@@ -129,27 +130,27 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Revenue:</span>
-                    <span className="font-medium">${revenue.toLocaleString()}</span>
+                    <span className="font-medium">{formatCurrency(revenue)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Gross Profit:</span>
-                    <span className="font-medium text-green-600">${calculateGrossProfit(yearKey).toLocaleString()}</span>
+                    <span className="font-medium text-green-600">{formatCurrency(calculateGrossProfit(yearKey))}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Operating Expenses:</span>
-                    <span className="font-medium text-red-600">-${calculateOperationalExpenses(yearKey).toLocaleString()}</span>
+                    <span className="font-medium text-red-600">-{formatCurrency(calculateOperationalExpenses(yearKey))}</span>
                   </div>
                   <hr className="my-2" />
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">EBITDA:</span>
                     <span className={`font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                      ${ebitda.toLocaleString()}
+                      {formatCurrency(ebitda)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">EBITDA Margin:</span>
                     <span className={`font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                      {ebitdaMargin.toFixed(1)}%
+                      {formatPercentage(ebitdaMargin)}
                     </span>
                   </div>
                 </div>
@@ -171,7 +172,7 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" />
                 <YAxis />
-                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
+                <Tooltip formatter={(value: number) => [formatCurrency(value), '']} />
                 <Bar dataKey="revenue" fill="#e2e8f0" name="Revenue" />
                 <Bar dataKey="grossProfit" fill="#22c55e" name="Gross Profit" />
                 <Bar dataKey="ebitda" fill="#3b82f6" name="EBITDA" />
@@ -193,7 +194,7 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" />
                 <YAxis />
-                <Tooltip formatter={(value: number) => [`${value.toFixed(1)}%`, '']} />
+                <Tooltip formatter={(value: number) => [formatPercentage(value), '']} />
                 <Line 
                   type="monotone" 
                   dataKey="grossMargin" 
@@ -228,7 +229,7 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" />
                 <YAxis />
-                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
+                <Tooltip formatter={(value: number) => [formatCurrency(value), '']} />
                 <Bar dataKey="direct" stackId="a" fill="#ef4444" name="Direct Costs" />
                 <Bar dataKey="team" stackId="a" fill="#8b5cf6" name="Team Costs" />
                 <Bar dataKey="admin" stackId="a" fill="#f59e0b" name="Admin Costs" />
@@ -248,25 +249,25 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-4 bg-gray-50 rounded-lg">
               <div className="text-2xl font-bold text-blue-600">
-                {calculateEBITDAMargin('year3').toFixed(1)}%
+                {formatPercentage(calculateEBITDAMargin('year3'))}
               </div>
               <div className="text-sm text-gray-600">Year 3 EBITDA Margin</div>
             </div>
             <div className="text-center p-4 bg-gray-50 rounded-lg">
               <div className="text-2xl font-bold text-green-600">
-                {calculateGrossMargin('year3').toFixed(1)}%
+                {formatPercentage(calculateGrossMargin('year3'))}
               </div>
               <div className="text-sm text-gray-600">Year 3 Gross Margin</div>
             </div>
             <div className="text-center p-4 bg-gray-50 rounded-lg">
               <div className="text-2xl font-bold text-purple-600">
-                ${(calculateTotalRevenue('year3') / 12).toLocaleString()}
+                {formatCurrency(calculateTotalRevenue('year3') / 12)}
               </div>
               <div className="text-sm text-gray-600">Year 3 Monthly Revenue</div>
             </div>
             <div className="text-center p-4 bg-gray-50 rounded-lg">
               <div className="text-2xl font-bold text-orange-600">
-                ${(calculateOperationalExpenses('year3') / 12).toLocaleString()}
+                {formatCurrency(calculateOperationalExpenses('year3') / 12)}
               </div>
               <div className="text-sm text-gray-600">Year 3 Monthly OpEx</div>
             </div>

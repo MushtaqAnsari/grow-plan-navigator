@@ -1,14 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FinancialData } from "@/pages/Index";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { TrendingUp, TrendingDown, AlertCircle, CheckCircle, Target, DollarSign, Percent, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertCircle, CheckCircle, Target, DollarSign, Percent, Calendar, Brain, Loader2 } from 'lucide-react';
+import { formatCurrency, formatPercentage } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AnalysisProps {
   data: FinancialData;
 }
 
 const Analysis: React.FC<AnalysisProps> = ({ data }) => {
+  const [aiInsights, setAiInsights] = useState<string>('');
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  
+  const getAIInsights = async () => {
+    setIsLoadingInsights(true);
+    try {
+      const { data: response, error } = await supabase.functions.invoke('analyze-financial-data', {
+        body: { financialData: data }
+      });
+      
+      if (error) throw error;
+      setAiInsights(response.insights);
+    } catch (error) {
+      console.error('Error getting AI insights:', error);
+      setAiInsights('Unable to generate AI insights. Please check your API key configuration.');
+    } finally {
+      setIsLoadingInsights(false);
+    }
+  };
+
   // Financial calculations
   const calculateTotalRevenue = (year: 'year1' | 'year2' | 'year3') => {
     return data.revenueStreams.reduce((sum, stream) => sum + stream[year], 0);
@@ -224,9 +247,9 @@ const Analysis: React.FC<AnalysisProps> = ({ data }) => {
                   </div>
                   <div className={`text-2xl font-bold ${metric.color}`}>
                     {metric.format === 'percentage' 
-                      ? `${(metric.value * 100).toFixed(1)}%`
+                      ? formatPercentage(metric.value * 100)
                       : metric.format === 'currency'
-                      ? `$${metric.value.toLocaleString()}`
+                      ? formatCurrency(metric.value)
                       : metric.format === 'year'
                       ? metric.value <= 3 ? `Year ${metric.value}` : 'Beyond Y3'
                       : metric.value.toFixed(1)
@@ -271,7 +294,7 @@ const Analysis: React.FC<AnalysisProps> = ({ data }) => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" />
                 <YAxis />
-                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
+                <Tooltip formatter={(value: number) => [formatCurrency(value), '']} />
                 <Area type="monotone" dataKey="revenue" stackId="1" stroke="#e2e8f0" fill="#e2e8f0" name="Revenue" />
                 <Area type="monotone" dataKey="grossProfit" stackId="2" stroke="#22c55e" fill="#22c55e" fillOpacity={0.6} name="Gross Profit" />
                 <Area type="monotone" dataKey="ebitda" stackId="3" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} name="EBITDA" />
@@ -294,7 +317,7 @@ const Analysis: React.FC<AnalysisProps> = ({ data }) => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" />
                 <YAxis />
-                <Tooltip formatter={(value: number) => [`${value.toFixed(1)}%`, '']} />
+                <Tooltip formatter={(value: number) => [formatPercentage(value), '']} />
                 <Line type="monotone" dataKey="grossMargin" stroke="#22c55e" strokeWidth={3} name="Gross Margin" />
                 <Line type="monotone" dataKey="ebitdaMargin" stroke="#3b82f6" strokeWidth={3} name="EBITDA Margin" />
                 <Line type="monotone" dataKey="netMargin" stroke="#8b5cf6" strokeWidth={3} name="Net Margin" />
@@ -316,15 +339,15 @@ const Analysis: React.FC<AnalysisProps> = ({ data }) => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Gross Margin (Y3):</span>
-                  <span className="font-medium">{ratios.profitability.grossMargin.year3.toFixed(1)}%</span>
+                  <span className="font-medium">{formatPercentage(ratios.profitability.grossMargin.year3)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>EBITDA Margin (Y3):</span>
-                  <span className="font-medium">{ratios.profitability.ebitdaMargin.year3.toFixed(1)}%</span>
+                  <span className="font-medium">{formatPercentage(ratios.profitability.ebitdaMargin.year3)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Net Margin (Y3):</span>
-                  <span className="font-medium">{ratios.profitability.netMargin.year3.toFixed(1)}%</span>
+                  <span className="font-medium">{formatPercentage(ratios.profitability.netMargin.year3)}</span>
                 </div>
               </div>
             </div>
@@ -334,15 +357,15 @@ const Analysis: React.FC<AnalysisProps> = ({ data }) => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Revenue Growth (Y2):</span>
-                  <span className="font-medium">{ratios.growth.revenueGrowth.year2.toFixed(1)}%</span>
+                  <span className="font-medium">{formatPercentage(ratios.growth.revenueGrowth.year2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Revenue Growth (Y3):</span>
-                  <span className="font-medium">{ratios.growth.revenueGrowth.year3.toFixed(1)}%</span>
+                  <span className="font-medium">{formatPercentage(ratios.growth.revenueGrowth.year3)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Profit Growth (Y3):</span>
-                  <span className="font-medium">{ratios.growth.profitGrowth.year3.toFixed(1)}%</span>
+                  <span className="font-medium">{formatPercentage(ratios.growth.profitGrowth.year3)}</span>
                 </div>
               </div>
             </div>
@@ -352,11 +375,11 @@ const Analysis: React.FC<AnalysisProps> = ({ data }) => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>OpEx to Revenue (Y3):</span>
-                  <span className="font-medium">{ratios.efficiency.costToRevenue.year3.toFixed(1)}%</span>
+                  <span className="font-medium">{formatPercentage(ratios.efficiency.costToRevenue.year3)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Revenue per Employee:</span>
-                  <span className="font-medium">${(calculateTotalRevenue('year3') / (data.costs.team.employees?.length || 1)).toLocaleString()}</span>
+                  <span className="font-medium">{formatCurrency(calculateTotalRevenue('year3') / (data.costs.team.employees?.length || 1))}</span>
                 </div>
               </div>
             </div>
@@ -399,6 +422,39 @@ const Analysis: React.FC<AnalysisProps> = ({ data }) => {
                 </div>
               );
             })}
+          </div>
+
+          {/* AI-Powered Insights */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-lg flex items-center gap-2">
+                <Brain className="w-5 h-5 text-blue-600" />
+                AI-Powered Financial Analysis
+              </h4>
+              <Button 
+                onClick={getAIInsights} 
+                disabled={isLoadingInsights}
+                variant="outline" 
+                size="sm"
+              >
+                {isLoadingInsights ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  'Get AI Insights'
+                )}
+              </Button>
+            </div>
+            {aiInsights && (
+              <div className="bg-white p-4 rounded-lg border border-blue-200">
+                <div className="text-sm whitespace-pre-line">{aiInsights}</div>
+              </div>
+            )}
+            {!aiInsights && !isLoadingInsights && (
+              <p className="text-sm text-gray-600">Click "Get AI Insights" to receive advanced analysis and strategic recommendations powered by ChatGPT.</p>
+            )}
           </div>
 
           <div className="mt-6 space-y-4">
