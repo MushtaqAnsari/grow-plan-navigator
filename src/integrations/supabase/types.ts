@@ -367,6 +367,75 @@ export type Database = {
           },
         ]
       }
+      operational_expenses_consultants: {
+        Row: {
+          created_at: string
+          department: string
+          designation: string
+          financial_model_id: string
+          id: string
+          monthly_cost: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string
+          designation: string
+          financial_model_id: string
+          id?: string
+          monthly_cost?: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          designation?: string
+          financial_model_id?: string
+          id?: string
+          monthly_cost?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      operational_expenses_employees: {
+        Row: {
+          created_at: string
+          department: string
+          designation: string
+          financial_model_id: string
+          id: string
+          is_capitalized: boolean
+          name: string
+          salary: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string
+          designation: string
+          financial_model_id: string
+          id?: string
+          is_capitalized?: boolean
+          name: string
+          salary?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          designation?: string
+          financial_model_id?: string
+          id?: string
+          is_capitalized?: boolean
+          name?: string
+          salary?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       revenue_streams: {
         Row: {
           created_at: string

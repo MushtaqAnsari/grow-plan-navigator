@@ -173,7 +173,9 @@ export const useFinancialData = (userId: string | undefined) => {
         accountsReceivableResult,
         capTableStakeholdersResult,
         safeAgreementsResult,
-        fundUtilizationResult
+        fundUtilizationResult,
+        operationalEmployeesResult,
+        operationalConsultantsResult
       ] = await Promise.all([
         supabase.from('revenue_streams').select('*').eq('financial_model_id', modelId),
         supabase.from('cost_structures').select('*').eq('financial_model_id', modelId),
@@ -186,7 +188,9 @@ export const useFinancialData = (userId: string | undefined) => {
         supabase.from('accounts_receivable').select('*').eq('financial_model_id', modelId),
         supabase.from('cap_table_stakeholders').select('*').eq('financial_model_id', modelId),
         supabase.from('safe_agreements').select('*').eq('financial_model_id', modelId),
-        supabase.from('fund_utilization').select('*').eq('financial_model_id', modelId)
+        supabase.from('fund_utilization').select('*').eq('financial_model_id', modelId),
+        supabase.from('operational_expenses_employees').select('*').eq('financial_model_id', modelId),
+        supabase.from('operational_expenses_consultants').select('*').eq('financial_model_id', modelId)
       ]);
 
       // Build financial data from database results
@@ -318,9 +322,29 @@ export const useFinancialData = (userId: string | undefined) => {
         defaultData.costs.balanceSheet.accountsReceivable.totalYear3 = totalYear3;
       }
 
-      // Add Cap Table and Fund Utilization data (extend FinancialData type to include these)
-      // For now, we'll store this in a temporary way until we update the FinancialData interface
-      
+      // Map operational expenses employees
+      if (operationalEmployeesResult.data && operationalEmployeesResult.data.length > 0) {
+        defaultData.costs.team.employees = operationalEmployeesResult.data.map(employee => ({
+          id: employee.id,
+          name: employee.name,
+          designation: employee.designation,
+          department: employee.department as any,
+          salary: employee.salary || 0,
+          isCapitalized: employee.is_capitalized || false
+        }));
+      }
+
+      // Map operational expenses consultants
+      if (operationalConsultantsResult.data && operationalConsultantsResult.data.length > 0) {
+        defaultData.costs.team.consultants = operationalConsultantsResult.data.map(consultant => ({
+          id: consultant.id,
+          name: consultant.name,
+          designation: consultant.designation,
+          department: consultant.department as any,
+          monthlyCost: consultant.monthly_cost || 0
+        }));
+      }
+
       setFinancialData(defaultData);
 
     } catch (error) {
@@ -588,6 +612,52 @@ export const useFinancialData = (userId: string | undefined) => {
                   financial_model_id: currentModelId,
                   revenue_stream_name: streamName,
                   ar_days: arData.arDays || 30
+                }))
+              );
+          }
+        }
+
+        // Handle operational expenses team saving
+        if (data.team) {
+          // Save employees
+          await supabase
+            .from('operational_expenses_employees')
+            .delete()
+            .eq('financial_model_id', currentModelId);
+
+          if (data.team.employees && data.team.employees.length > 0) {
+            await supabase
+              .from('operational_expenses_employees')
+              .insert(
+                data.team.employees.map((employee: any) => ({
+                  id: employee.id,
+                  financial_model_id: currentModelId,
+                  name: employee.name,
+                  designation: employee.designation,
+                  department: employee.department,
+                  salary: employee.salary,
+                  is_capitalized: employee.isCapitalized
+                }))
+              );
+          }
+
+          // Save consultants
+          await supabase
+            .from('operational_expenses_consultants')
+            .delete()
+            .eq('financial_model_id', currentModelId);
+
+          if (data.team.consultants && data.team.consultants.length > 0) {
+            await supabase
+              .from('operational_expenses_consultants')
+              .insert(
+                data.team.consultants.map((consultant: any) => ({
+                  id: consultant.id,
+                  financial_model_id: currentModelId,
+                  name: consultant.name,
+                  designation: consultant.designation,
+                  department: consultant.department,
+                  monthly_cost: consultant.monthlyCost
                 }))
               );
           }
