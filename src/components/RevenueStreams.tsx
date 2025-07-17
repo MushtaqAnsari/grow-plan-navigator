@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { formatCurrency, formatPercentage } from '@/lib/utils';
 
 interface RevenueStream {
   name: string;
@@ -604,30 +605,30 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
 
                 {/* Numbers */}
                 <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-xl font-bold text-green-600">
-                      ${Math.round(calculateRevenue(newStream).year1).toLocaleString()}
-                    </p>
-                    <p className="text-sm text-green-700">Year 1</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-green-600">
-                      ${Math.round(calculateRevenue(newStream).year2).toLocaleString()}
-                    </p>
-                    <p className="text-sm text-green-700">Year 2</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-green-600">
-                      ${Math.round(calculateRevenue(newStream).year3).toLocaleString()}
-                    </p>
-                    <p className="text-sm text-green-700">Year 3</p>
-                  </div>
+                   <div>
+                     <p className="text-xl font-bold text-green-600">
+                       {formatCurrency(calculateRevenue(newStream).year1)}
+                     </p>
+                     <p className="text-sm text-green-700">Year 1</p>
+                   </div>
+                   <div>
+                     <p className="text-xl font-bold text-green-600">
+                       {formatCurrency(calculateRevenue(newStream).year2)}
+                     </p>
+                     <p className="text-sm text-green-700">Year 2</p>
+                   </div>
+                   <div>
+                     <p className="text-xl font-bold text-green-600">
+                       {formatCurrency(calculateRevenue(newStream).year3)}
+                     </p>
+                     <p className="text-sm text-green-700">Year 3</p>
+                   </div>
                 </div>
-                <div className="mt-3 text-center">
-                  <p className="text-sm text-green-600 font-medium">
-                    YoY Growth Rate: {Math.round(calculateRevenue(newStream).growthRate)}%
-                  </p>
-                </div>
+                 <div className="mt-3 text-center">
+                   <p className="text-sm text-green-600 font-medium">
+                     YoY Growth Rate: {formatPercentage(calculateRevenue(newStream).growthRate)}
+                   </p>
+                 </div>
               </div>
             )}
 
@@ -656,38 +657,30 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <Label>Year 1 ($)</Label>
-                <Input
-                  type="number"
-                  value={stream.year1 || ''}
-                  onChange={(e) => updateRevenueStream(index, 'year1', Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label>Year 2 ($)</Label>
-                <Input
-                  type="number"
-                  value={stream.year2 || ''}
-                  onChange={(e) => updateRevenueStream(index, 'year2', Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label>Year 3 ($)</Label>
-                <Input
-                  type="number"
-                  value={stream.year3 || ''}
-                  onChange={(e) => updateRevenueStream(index, 'year3', Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label>Growth Rate (%)</Label>
-                <Input
-                  type="number"
-                  value={stream.growthRate || ''}
-                  onChange={(e) => updateRevenueStream(index, 'growthRate', Number(e.target.value))}
-                />
-              </div>
+               <div>
+                 <Label>Year 1 ($)</Label>
+                 <div className="text-lg font-semibold p-2 bg-gray-50 rounded">
+                   {formatCurrency(stream.year1)}
+                 </div>
+               </div>
+               <div>
+                 <Label>Year 2 ($)</Label>
+                 <div className="text-lg font-semibold p-2 bg-gray-50 rounded">
+                   {formatCurrency(stream.year2)}
+                 </div>
+               </div>
+               <div>
+                 <Label>Year 3 ($)</Label>
+                 <div className="text-lg font-semibold p-2 bg-gray-50 rounded">
+                   {formatCurrency(stream.year3)}
+                 </div>
+               </div>
+               <div>
+                 <Label>Growth Rate (%)</Label>
+                 <div className="text-lg font-semibold p-2 bg-gray-50 rounded">
+                   {formatPercentage(stream.growthRate)}
+                 </div>
+               </div>
             </div>
           </CardContent>
         </Card>
@@ -701,24 +694,24 @@ const RevenueStreams: React.FC<RevenueStreamsProps> = ({ data, onChange, industr
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">
-                  ${totalRevenue('year1').toLocaleString()}
-                </p>
-                <p className="text-sm text-green-700">Year 1</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">
-                  ${totalRevenue('year2').toLocaleString()}
-                </p>
-                <p className="text-sm text-green-700">Year 2</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">
-                  ${totalRevenue('year3').toLocaleString()}
-                </p>
-                <p className="text-sm text-green-700">Year 3</p>
-              </div>
+                 <div className="text-center">
+                   <p className="text-2xl font-bold text-green-600">
+                     {formatCurrency(totalRevenue('year1'))}
+                   </p>
+                   <p className="text-sm text-green-700">Year 1</p>
+                 </div>
+                 <div className="text-center">
+                   <p className="text-2xl font-bold text-green-600">
+                     {formatCurrency(totalRevenue('year2'))}
+                   </p>
+                   <p className="text-sm text-green-700">Year 2</p>
+                 </div>
+                 <div className="text-center">
+                   <p className="text-2xl font-bold text-green-600">
+                     {formatCurrency(totalRevenue('year3'))}
+                   </p>
+                   <p className="text-sm text-green-700">Year 3</p>
+                 </div>
             </div>
           </CardContent>
         </Card>
