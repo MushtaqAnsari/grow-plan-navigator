@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Plus, Trash2, Lightbulb } from 'lucide-react';
 import { formatCurrency } from "@/lib/utils";
 
 interface Employee {
@@ -17,25 +18,88 @@ interface Employee {
 interface EmployeePlanningProps {
   data: Employee[];
   onChange: (data: Employee[]) => void;
+  onAddIntangibleAsset?: (assetName: string, cost: number) => void;
 }
 
-const EmployeePlanning: React.FC<EmployeePlanningProps> = ({ data, onChange }) => {
+const EmployeePlanning: React.FC<EmployeePlanningProps> = ({ data, onChange, onAddIntangibleAsset }) => {
   const [newEmployee, setNewEmployee] = useState<Employee>({
     role: '',
     count: 1,
     salary: 0,
     year: 1
   });
+  const [showIPDialog, setShowIPDialog] = useState(false);
+  const [ipAssetName, setIpAssetName] = useState('');
+  const [ipAssetCost, setIpAssetCost] = useState(0);
+  const [pendingEmployee, setPendingEmployee] = useState<Employee | null>(null);
+
+  // Check if role is technology-related
+  const isTechnologyRole = (role: string) => {
+    const techRoles = ['CTO/Tech Lead', 'Software Engineer', 'Data Analyst', 'Designer'];
+    return techRoles.includes(role) || 
+           role.toLowerCase().includes('engineer') || 
+           role.toLowerCase().includes('developer') || 
+           role.toLowerCase().includes('tech') ||
+           role.toLowerCase().includes('data') ||
+           role.toLowerCase().includes('ai') ||
+           role.toLowerCase().includes('ml');
+  };
 
   const addEmployee = () => {
     if (newEmployee.role) {
-      onChange([...data, newEmployee]);
-      setNewEmployee({
-        role: '',
-        count: 1,
-        salary: 0,
-        year: 1
-      });
+      if (isTechnologyRole(newEmployee.role)) {
+        // Show IP dialog for technology roles
+        setPendingEmployee(newEmployee);
+        setIpAssetName(`IP Development - ${newEmployee.role}`);
+        setIpAssetCost(newEmployee.salary * newEmployee.count * 0.3); // Suggest 30% of salary as IP cost
+        setShowIPDialog(true);
+      } else {
+        // Add employee directly for non-tech roles
+        onChange([...data, newEmployee]);
+        resetNewEmployee();
+      }
+    }
+  };
+
+  const resetNewEmployee = () => {
+    setNewEmployee({
+      role: '',
+      count: 1,
+      salary: 0,
+      year: 1
+    });
+  };
+
+  const handleIPDialogConfirm = () => {
+    if (pendingEmployee) {
+      // Add the employee
+      onChange([...data, pendingEmployee]);
+      
+      // Add intangible asset if callback provided and cost > 0
+      if (onAddIntangibleAsset && ipAssetCost > 0) {
+        onAddIntangibleAsset(ipAssetName, ipAssetCost);
+      }
+      
+      // Reset states
+      resetNewEmployee();
+      setPendingEmployee(null);
+      setShowIPDialog(false);
+      setIpAssetName('');
+      setIpAssetCost(0);
+    }
+  };
+
+  const handleIPDialogCancel = () => {
+    if (pendingEmployee) {
+      // Still add the employee but without IP asset
+      onChange([...data, pendingEmployee]);
+      
+      // Reset states
+      resetNewEmployee();
+      setPendingEmployee(null);
+      setShowIPDialog(false);
+      setIpAssetName('');
+      setIpAssetCost(0);
     }
   };
 
@@ -250,6 +314,56 @@ const EmployeePlanning: React.FC<EmployeePlanningProps> = ({ data, onChange }) =
           </CardContent>
         </Card>
       )}
+
+      {/* IP Asset Creation Dialog */}
+      <Dialog open={showIPDialog} onOpenChange={setShowIPDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-yellow-500" />
+              Add Intangible Asset?
+            </DialogTitle>
+            <DialogDescription>
+              Technology roles often create intellectual property (IP). Would you like to add this as an intangible asset to your balance sheet?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="ip-name">Asset Name</Label>
+              <Input
+                id="ip-name"
+                value={ipAssetName}
+                onChange={(e) => setIpAssetName(e.target.value)}
+                placeholder="e.g., Software Development IP"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="ip-cost">Estimated Cost ($)</Label>
+              <Input
+                id="ip-cost"
+                type="number"
+                value={ipAssetCost || ''}
+                onChange={(e) => setIpAssetCost(Number(e.target.value))}
+                placeholder="0"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Suggested: 30% of annual salary for IP development costs
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={handleIPDialogCancel}>
+              Skip
+            </Button>
+            <Button onClick={handleIPDialogConfirm}>
+              Add IP Asset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

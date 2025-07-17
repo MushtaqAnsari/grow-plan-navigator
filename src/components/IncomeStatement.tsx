@@ -127,6 +127,26 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ data, onUpdateData })
                 revenueStreams={data.revenueStreams}
                 balanceSheetData={data.costs.balanceSheet}
                 onChange={(costs) => updateFinancialData('costs', costs)}
+                onAddIntangibleAsset={(assetName, cost) => {
+                  const newAsset = {
+                    id: `asset-${Date.now()}`,
+                    name: assetName,
+                    cost: cost,
+                    usefulLife: 5,
+                    assetClass: 'intangible' as const,
+                    isFromCapitalizedPayroll: true
+                  };
+                  updateFinancialData('costs', {
+                    ...data.costs,
+                    balanceSheet: {
+                      ...data.costs.balanceSheet,
+                      fixedAssets: {
+                        ...data.costs.balanceSheet.fixedAssets,
+                        assets: [...data.costs.balanceSheet.fixedAssets.assets, newAsset]
+                      }
+                    }
+                  });
+                }}
               />
             </CardContent>
           </Card>

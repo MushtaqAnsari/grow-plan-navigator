@@ -7,8 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { FinancialData } from "@/pages/Index";
-import { Plus, Trash2, BarChart3, Users } from "lucide-react";
+import { Plus, Trash2, BarChart3, Users, Lightbulb } from "lucide-react";
 
 interface OperationalExpensesProps {
   data: {
@@ -23,10 +24,23 @@ interface OperationalExpensesProps {
   }) => void;
   revenueStreams: FinancialData['revenueStreams'];
   balanceSheetData: FinancialData['costs']['balanceSheet'];
+  onAddIntangibleAsset?: (assetName: string, cost: number) => void;
 }
 
-const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChange, revenueStreams, balanceSheetData }) => {
+const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChange, revenueStreams, balanceSheetData, onAddIntangibleAsset }) => {
   const [showDepartmentReport, setShowDepartmentReport] = useState(false);
+  const [showIPDialog, setShowIPDialog] = useState(false);
+  const [ipAssetName, setIpAssetName] = useState('');
+  const [ipAssetCost, setIpAssetCost] = useState(0);
+  const [pendingEmployee, setPendingEmployee] = useState<any>(null);
+
+  // Check if designation is technology-related
+  const isTechnologyRole = (designation: string) => {
+    const techRoles = ['cto', 'tech lead', 'software engineer', 'developer', 'programmer', 
+                       'data analyst', 'data scientist', 'ai engineer', 'ml engineer',
+                       'frontend', 'backend', 'fullstack', 'devops', 'architect'];
+    return techRoles.some(role => designation.toLowerCase().includes(role));
+  };
 
   // Employee management functions
   const addEmployee = () => {
@@ -49,13 +63,26 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   };
 
   const updateEmployee = (id: string, field: string, value: any) => {
+    const updatedEmployees = data.team.employees.map(emp => 
+      emp.id === id ? { ...emp, [field]: value } : emp
+    );
+    
+    // Check if we're updating designation to a technology role
+    if (field === 'designation' && isTechnologyRole(value)) {
+      const updatedEmployee = updatedEmployees.find(emp => emp.id === id);
+      if (updatedEmployee && updatedEmployee.salary > 0) {
+        setPendingEmployee(updatedEmployee);
+        setIpAssetName(`IP Development - ${value}`);
+        setIpAssetCost(updatedEmployee.salary * 0.3); // Suggest 30% of salary as IP cost
+        setShowIPDialog(true);
+      }
+    }
+    
     onChange({
       ...data,
       team: {
         ...data.team,
-        employees: data.team.employees.map(emp => 
-          emp.id === id ? { ...emp, [field]: value } : emp
-        )
+        employees: updatedEmployees
       }
     });
   };
@@ -1138,6 +1165,64 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
           ))}
         </TabsContent>
       </Tabs>
+
+      {/* IP Asset Creation Dialog */}
+      <Dialog open={showIPDialog} onOpenChange={setShowIPDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-yellow-500" />
+              Add Intangible Asset?
+            </DialogTitle>
+            <DialogDescription>
+              Technology roles often create intellectual property (IP). Would you like to add this as an intangible asset to your balance sheet?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="ip-name">Asset Name</Label>
+              <Input
+                id="ip-name"
+                value={ipAssetName}
+                onChange={(e) => setIpAssetName(e.target.value)}
+                placeholder="e.g., Software Development IP"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="ip-cost">Estimated Cost ($)</Label>
+              <Input
+                id="ip-cost"
+                type="number"
+                value={ipAssetCost || ''}
+                onChange={(e) => setIpAssetCost(Number(e.target.value))}
+                placeholder="0"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Suggested: 30% of annual salary for IP development costs
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowIPDialog(false)}>
+              Skip
+            </Button>
+            <Button onClick={() => {
+              if (onAddIntangibleAsset && ipAssetCost > 0) {
+                onAddIntangibleAsset(ipAssetName, ipAssetCost);
+              }
+              setShowIPDialog(false);
+              setIpAssetName('');
+              setIpAssetCost(0);
+              setPendingEmployee(null);
+            }}>
+              Add IP Asset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
