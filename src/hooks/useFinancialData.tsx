@@ -630,7 +630,6 @@ export const useFinancialData = (userId: string | undefined) => {
               .from('operational_expenses_employees')
               .insert(
                 data.team.employees.map((employee: any) => ({
-                  id: employee.id,
                   financial_model_id: currentModelId,
                   name: employee.name,
                   designation: employee.designation,
@@ -652,7 +651,6 @@ export const useFinancialData = (userId: string | undefined) => {
               .from('operational_expenses_consultants')
               .insert(
                 data.team.consultants.map((consultant: any) => ({
-                  id: consultant.id,
                   financial_model_id: currentModelId,
                   name: consultant.name,
                   designation: consultant.designation,
