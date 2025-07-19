@@ -10,9 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import BalanceSheet from "@/components/BalanceSheet";
 import CompanySetup from "@/components/CompanySetup";
-import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, LogOut } from "lucide-react";
+import FinancialModelAgent from "@/components/FinancialModelAgent";
+import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, LogOut, Bot } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFinancialData } from "@/hooks/useFinancialData";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { createCyberLabsDemoData, createCyberLabsCompanyData } from "@/utils/demoData";
 
 export interface FinancialData {
@@ -207,6 +210,118 @@ const Index = () => {
     setIndustry 
   } = useFinancialData(user?.id);
   const [activeTab, setActiveTab] = useState("income-statement");
+  const [showAIAgent, setShowAIAgent] = useState(false);
+  const { toast } = useToast();
+
+  const handleAIDataGenerated = async (generatedData: any) => {
+    try {
+      // Set company data first
+      if (generatedData.companyData) {
+        setCompanyData(generatedData.companyData);
+        setIndustry(generatedData.companyData.industry);
+      }
+
+      // Map and save each section of financial data
+      if (generatedData.revenueStreams) {
+        const mappedRevenue = generatedData.revenueStreams.map((stream: any) => ({
+          ...stream,
+          type: 'saas' as const,
+          growthRate: 20,
+          arDays: 30
+        }));
+        await updateFinancialData('revenueStreams', mappedRevenue);
+      }
+
+      if (generatedData.costStructures) {
+        const existingCosts = financialData?.costs || {
+          revenueStreamCosts: {},
+          team: { employees: [], consultants: [], healthCare: { amount: 0, percentage: 0 }, benefits: { amount: 0, percentage: 0 }, iqama: { amount: 0, percentage: 0 }, recruitment: { year1: 0, year2: 0, year3: 0 } },
+          admin: { rent: { monthlyAmount: 0, utilitiesPercentage: 0, year1: 0, year2: 0, year3: 0 }, travel: { tripsPerMonth: 0, domesticCostPerTrip: 0, internationalCostPerTrip: 0, domesticTripsRatio: 0, year1: 0, year2: 0, year3: 0 }, insurance: { percentageOfAssets: 0, year1: 0, year2: 0, year3: 0 }, legal: { year1: 0, year2: 0, year3: 0 }, accounting: { year1: 0, year2: 0, year3: 0 }, software: { items: [], year1: 0, year2: 0, year3: 0 }, other: { year1: 0, year2: 0, year3: 0 } },
+          balanceSheet: { fixedAssets: { assets: [], year1: 0, year2: 0, year3: 0 }, accountsReceivable: { revenueStreamARs: {}, totalYear1: 0, totalYear2: 0, totalYear3: 0 }, accountsPayable: { daysForPayment: 30, year1: 0, year2: 0, year3: 0 }, cashAndBank: { year1: 0, year2: 0, year3: 0 }, inventory: { year1: 0, year2: 0, year3: 0 }, otherAssets: { year1: 0, year2: 0, year3: 0 }, otherLiabilities: { year1: 0, year2: 0, year3: 0 } },
+          marketing: { isPercentageOfRevenue: true, percentageOfRevenue: 10, manualBudget: { year1: 0, year2: 0, year3: 0 }, digitalAdvertising: { year1: 0, year2: 0, year3: 0 }, contentCreation: { year1: 0, year2: 0, year3: 0 }, events: { year1: 0, year2: 0, year3: 0 }, pr: { year1: 0, year2: 0, year3: 0 }, brandingDesign: { year1: 0, year2: 0, year3: 0 }, tools: { year1: 0, year2: 0, year3: 0 }, other: { year1: 0, year2: 0, year3: 0 } }
+        };
+        
+        // Add cost structures to admin.other
+        const totalCostsByYear = generatedData.costStructures.reduce((acc: any, cost: any) => {
+          acc.year1 += cost.year1 || 0;
+          acc.year2 += cost.year2 || 0;
+          acc.year3 += cost.year3 || 0;
+          acc.year4 += cost.year4 || 0;
+          acc.year5 += cost.year5 || 0;
+          return acc;
+        }, { year1: 0, year2: 0, year3: 0, year4: 0, year5: 0 });
+
+        existingCosts.admin.other = {
+          year1: totalCostsByYear.year1,
+          year2: totalCostsByYear.year2,
+          year3: totalCostsByYear.year3
+        };
+        
+        await updateFinancialData('costs', existingCosts);
+      }
+
+      if (generatedData.employeePlanning) {
+        const mappedEmployees = generatedData.employeePlanning.map((emp: any) => ({
+          id: Math.random().toString(36).substr(2, 9),
+          name: emp.role,
+          designation: emp.role,
+          department: 'other' as const,
+          salary: emp.salary_per_employee || 50000,
+          isCapitalized: false
+        }));
+        await updateFinancialData('employees', mappedEmployees);
+      }
+
+      // Save other data sections
+      if (generatedData.capTableStakeholders) {
+        // This would need to be handled by the Valuation component
+      }
+
+      if (generatedData.fundUtilization) {
+        const totalFunding = generatedData.fundUtilization.reduce((acc: number, item: any) => acc + (item.amount || 0), 0);
+        await updateFinancialData('funding', {
+          totalFunding,
+          burnRate: totalFunding / 24, // 24 month runway
+          useOfFunds: generatedData.fundUtilization.map((item: any) => ({
+            category: item.category,
+            percentage: item.percentage || 0,
+            amount: item.amount || 0
+          }))
+        });
+      }
+
+      if (generatedData.taxation) {
+        await updateFinancialData('taxation', {
+          incomeTax: {
+            enabled: generatedData.taxation.income_tax_enabled || false,
+            corporateRate: generatedData.taxation.corporate_tax_rate || 0,
+            year1: 0,
+            year2: 0,
+            year3: 0
+          },
+          zakat: {
+            enabled: generatedData.taxation.zakat_enabled || false,
+            rate: 2.5,
+            calculationMethod: 'net-worth' as const,
+            year1: 0,
+            year2: 0,
+            year3: 0
+          }
+        });
+      }
+
+      setShowAIAgent(false);
+      setActiveTab("income-statement");
+      
+    } catch (error) {
+      console.error('Error saving AI generated data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save generated data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Show loading while data is being fetched
   if (loading) {
@@ -259,22 +374,66 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Company Setup or Main Content */}
-        {!companyData ? (
-          <CompanySetup onSetupComplete={(data) => {
-            setCompanyData(data);
-            setIndustry(data.industry);
-            
-            // If it's CyberLabs demo, load demo financial data
-            if (data.companyName === "CyberLabs") {
-              const demoData = createCyberLabsDemoData();
-              Object.keys(demoData).forEach(key => {
-                updateFinancialData(key as keyof FinancialData, demoData[key as keyof FinancialData]);
-              });
-            }
-            
-            setActiveTab("income-statement");
-          }} />
+        {/* AI Agent or Company Setup or Main Content */}
+        {showAIAgent ? (
+          <FinancialModelAgent 
+            onDataGenerated={handleAIDataGenerated}
+            onSwitchToManual={() => setShowAIAgent(false)}
+          />
+        ) : !companyData ? (
+          <div className="space-y-6">
+            {/* Choice Card */}
+            <Card className="max-w-2xl mx-auto">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl mb-2">Welcome to Financial Model Builder</CardTitle>
+                <CardDescription>
+                  Choose how you'd like to create your financial model
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Button
+                    variant="outline"
+                    className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-primary/5"
+                    onClick={() => setShowAIAgent(true)}
+                  >
+                    <Bot className="h-6 w-6 text-primary" />
+                    <div className="text-center">
+                      <div className="font-semibold">AI Financial Agent</div>
+                      <div className="text-xs text-muted-foreground">Describe your needs, get instant model</div>
+                    </div>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-primary/5"
+                    onClick={() => setShowAIAgent(false)}
+                  >
+                    <FileText className="h-6 w-6 text-primary" />
+                    <div className="text-center">
+                      <div className="font-semibold">Manual Entry</div>
+                      <div className="text-xs text-muted-foreground">Build step-by-step manually</div>
+                    </div>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <CompanySetup onSetupComplete={(data) => {
+              setCompanyData(data);
+              setIndustry(data.industry);
+              
+              // If it's CyberLabs demo, load demo financial data
+              if (data.companyName === "CyberLabs") {
+                const demoData = createCyberLabsDemoData();
+                Object.keys(demoData).forEach(key => {
+                  updateFinancialData(key as keyof FinancialData, demoData[key as keyof FinancialData]);
+                });
+              }
+              
+              setActiveTab("income-statement");
+            }} />
+          </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <div className="flex justify-between items-center mb-6">
