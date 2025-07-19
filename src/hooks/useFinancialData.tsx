@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { FinancialData } from '@/pages/Index';
@@ -698,7 +698,7 @@ export const useFinancialData = (userId: string | undefined) => {
     }
   };
 
-  const saveCapTableData = async (stakeholders: any[], safeAgreements: any[]) => {
+  const saveCapTableData = useCallback(async (stakeholders: any[], safeAgreements: any[]) => {
     if (!userId || !currentModelId) return;
 
     try {
@@ -754,7 +754,7 @@ export const useFinancialData = (userId: string | undefined) => {
         variant: "destructive"
       });
     }
-  };
+  }, [userId, currentModelId, toast]);
 
   const saveFundUtilizationData = async (useOfFunds: any[]) => {
     if (!userId || !currentModelId) return;
