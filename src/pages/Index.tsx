@@ -15,6 +15,7 @@ import DebugPanel from "@/components/DebugPanel";
 import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, LogOut, Bot, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFinancialData } from "@/hooks/useFinancialData";
+import ErrorMessage from "@/components/ErrorMessage";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createCyberLabsDemoData, createCyberLabsCompanyData } from "@/utils/demoData";
@@ -200,7 +201,7 @@ export interface FinancialData {
 }
 
 const Index = () => {
-  const { user, signOut, debugInfo: authDebug } = useAuth();
+  const { user, signOut, error: authError, debugInfo: authDebug } = useAuth();
   const { 
     financialData, 
     loading, 
@@ -212,6 +213,8 @@ const Index = () => {
     resetSetup,
     debugInfo: financialDebug
   } = useFinancialData(user?.id);
+  
+  const dataError = financialDebug?.error;
   const [activeTab, setActiveTab] = useState("income-statement");
   const [showAIAgent, setShowAIAgent] = useState(false);
   const [forceShowChoices, setForceShowChoices] = useState(false);
@@ -343,6 +346,40 @@ const Index = () => {
     console.log('🔄 Refreshing data');
     window.location.reload();
   };
+
+  // Show authentication error if any
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <ErrorMessage 
+          error={authError} 
+          context="auth"
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
+  }
+
+  // Show data error if any
+  if (dataError && user && !loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <DebugPanel
+          authDebug={authDebug}
+          financialDebug={financialDebug}
+          onRefresh={handleRefreshData}
+          onReset={handleResetSetup}
+        />
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <ErrorMessage 
+            error={dataError} 
+            context="data"
+            onRetry={() => window.location.reload()}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

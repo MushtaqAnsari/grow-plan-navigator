@@ -48,9 +48,32 @@ const FinancialModelAgent: React.FC<FinancialModelAgentProps> = ({
       }
     } catch (error) {
       console.error('Error generating financial model:', error);
+      
+      // Create user-friendly error messages
+      let userMessage = 'Failed to generate your financial model.';
+      let suggestion = 'Please try again or use manual entry.';
+      
+      if (error instanceof Error) {
+        const errorMsg = error.message.toLowerCase();
+        
+        if (errorMsg.includes('quota') || errorMsg.includes('insufficient')) {
+          userMessage = 'AI service is temporarily unavailable due to high demand.';
+          suggestion = 'You can create your model manually instead.';
+        } else if (errorMsg.includes('network') || errorMsg.includes('timeout')) {
+          userMessage = 'Connection issue while generating model.';
+          suggestion = 'Please check your internet and try again.';
+        } else if (errorMsg.includes('unauthorized') || errorMsg.includes('permission')) {
+          userMessage = 'Authentication expired.';
+          suggestion = 'Please sign in again.';
+        } else if (errorMsg.includes('429') || errorMsg.includes('rate')) {
+          userMessage = 'Too many requests. Please wait a moment.';
+          suggestion = 'Try again in a few seconds.';
+        }
+      }
+      
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : 'Failed to generate financial model',
+        title: "Generation Failed",
+        description: `${userMessage} ${suggestion}`,
         variant: "destructive",
       });
     } finally {

@@ -377,10 +377,23 @@ export const useFinancialData = (userId: string | undefined) => {
 
     } catch (error) {
       console.error('💼 Financial Data: Error loading:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      
+      // Create user-friendly error message
+      let userMessage = 'We had trouble loading your financial data.';
+      let technicalMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      if (technicalMessage.includes('network') || technicalMessage.includes('timeout')) {
+        userMessage = 'Connection issue - please check your internet and try again.';
+      } else if (technicalMessage.includes('permission') || technicalMessage.includes('policy')) {
+        userMessage = 'Access denied - please sign in again.';
+      } else if (technicalMessage.includes('database')) {
+        userMessage = 'Database connection issue - we\'re working to fix this.';
+      }
+      
+      setError(userMessage);
       toast({
-        title: "Error Loading Data",
-        description: "Failed to load your financial data. Creating new model.",
+        title: "Data Loading Issue",
+        description: userMessage + " Starting with a fresh model instead.",
         variant: "destructive"
       });
       setFinancialData(createDefaultFinancialData());
@@ -413,9 +426,19 @@ export const useFinancialData = (userId: string | undefined) => {
       });
     } catch (error) {
       console.error('Error saving company data:', error);
+      let errorMessage = 'Failed to save your company information.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network')) {
+          errorMessage = 'Connection lost while saving. Please try again.';
+        } else if (error.message.includes('permission')) {
+          errorMessage = 'Permission denied. Please sign in again.';
+        }
+      }
+      
       toast({
-        title: "Save Error",
-        description: "Failed to save company data.",
+        title: "Save Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     }

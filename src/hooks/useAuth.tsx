@@ -7,11 +7,13 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  error: string | null;
   signOut: () => Promise<void>;
   debugInfo?: {
     authState: string;
     sessionExists: boolean;
     userExists: boolean;
+    error?: string;
   };
 }
 
@@ -21,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [authState, setAuthState] = useState('initializing');
 
   useEffect(() => {
@@ -34,18 +37,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthState(`event_${event}`);
         setSession(session);
         setUser(session?.user ?? null);
+        setError(null); // Clear any previous errors on successful auth change
         setLoading(false);
       }
     );
 
     // THEN check for existing session
     setAuthState('checking_session');
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       console.log('🔐 Initial session check:', !!session);
+      if (error) {
+        console.error('🔐 Session check error:', error);
+        setError(`Failed to check authentication status: ${error.message}`);
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
       setAuthState(session ? 'authenticated' : 'unauthenticated');
+    }).catch((err) => {
+      console.error('🔐 Session check failed:', err);
+      setError('Failed to verify your login status. Please refresh the page.');
+      setLoading(false);
+      setAuthState('error');
     });
 
     // Add timeout fallback
@@ -64,19 +77,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loading]);
 
   const signOut = async () => {
-    console.log('🔐 Signing out');
-    setAuthState('signing_out');
-    await supabase.auth.signOut();
+    try {
+      console.log('🔐 Signing out');
+      setAuthState('signing_out');
+      setError(null);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('🔐 Sign out error:', error);
+        setError(`Failed to sign out: ${error.message}`);
+      }
+    } catch (err) {
+      console.error('🔐 Sign out failed:', err);
+      setError('Failed to sign out properly. Please clear your browser data.');
+    }
   };
 
   const debugInfo = {
     authState,
     sessionExists: !!session,
     userExists: !!user,
+    error: error || undefined,
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut, debugInfo }}>
+    <AuthContext.Provider value={{ user, session, loading, error, signOut, debugInfo }}>
       {children}
     </AuthContext.Provider>
   );
