@@ -10,13 +10,36 @@ export const useFinancialData = (userId: string | undefined) => {
   const [currentModelId, setCurrentModelId] = useState<string | null>(null);
   const [companyData, setCompanyData] = useState<any>(null);
   const [industry, setIndustry] = useState<string>("");
+  const [loadingState, setLoadingState] = useState<string>('waiting_for_user');
+  const [error, setError] = useState<string | null>(null);
 
   // Load financial data when user is available
   useEffect(() => {
     if (userId) {
+      console.log('💼 Financial Data: Loading for user', userId);
       loadFinancialData();
+    } else {
+      console.log('💼 Financial Data: No user ID, skipping load');
+      setLoading(false);
+      setLoadingState('no_user');
     }
   }, [userId]);
+
+  // Add timeout for loading
+  useEffect(() => {
+    if (loading && userId) {
+      const timeoutId = setTimeout(() => {
+        if (loading) {
+          console.warn('💼 Financial Data: Loading timeout reached');
+          setLoading(false);
+          setLoadingState('timeout');
+          setError('Loading timeout - please try refreshing the page');
+        }
+      }, 10000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [loading, userId]);
 
   const createDefaultFinancialData = (): FinancialData => ({
     revenueStreams: [],
@@ -126,6 +149,9 @@ export const useFinancialData = (userId: string | undefined) => {
 
     try {
       setLoading(true);
+      setLoadingState('loading_models');
+      setError(null);
+      console.log('💼 Financial Data: Starting load process');
 
       // Get or create financial model
       let { data: models, error: modelsError } = await supabase
@@ -134,11 +160,16 @@ export const useFinancialData = (userId: string | undefined) => {
         .eq('user_id', userId)
         .limit(1);
 
-      if (modelsError) throw modelsError;
+      if (modelsError) {
+        console.error('💼 Financial Data: Error loading models:', modelsError);
+        throw modelsError;
+      }
 
       let modelId: string;
 
       if (!models || models.length === 0) {
+        console.log('💼 Financial Data: Creating new model');
+        setLoadingState('creating_model');
         // Create new financial model
         const { data: newModel, error: createError } = await supabase
           .from('financial_models')
@@ -152,15 +183,19 @@ export const useFinancialData = (userId: string | undefined) => {
           .select()
           .single();
 
-        if (createError) throw createError;
+        if (createError) {
+          console.error('💼 Financial Data: Error creating model:', createError);
+          throw createError;
+        }
         modelId = newModel.id;
       } else {
         modelId = models[0].id;
+        console.log('💼 Financial Data: Using existing model', modelId);
       }
 
       setCurrentModelId(modelId);
+      setLoadingState('loading_data');
 
-      // Load all data in parallel
       const [
         revenueStreamsResult,
         costStructuresResult,
@@ -193,10 +228,10 @@ export const useFinancialData = (userId: string | undefined) => {
         supabase.from('operational_expenses_consultants').select('*').eq('financial_model_id', modelId)
       ]);
 
-      // Build financial data from database results
+      setLoadingState('processing_data');
+
       const defaultData = createDefaultFinancialData();
 
-      // Load company data from financial model
       if (financialModelResult.data) {
         const loadedCompanyData = {
           companyName: financialModelResult.data.company_name,
@@ -206,21 +241,20 @@ export const useFinancialData = (userId: string | undefined) => {
         };
         setCompanyData(loadedCompanyData);
         setIndustry(financialModelResult.data.industry || '');
+        console.log('💼 Financial Data: Loaded company data:', loadedCompanyData);
       }
 
-      // Map revenue streams
       if (revenueStreamsResult.data && revenueStreamsResult.data.length > 0) {
         defaultData.revenueStreams = revenueStreamsResult.data.map(stream => ({
           name: stream.name,
-          type: 'saas' as const, // Default type since it's not in DB schema
+          type: 'saas' as const,
           year1: stream.year1 || 0,
           year2: stream.year2 || 0,
           year3: stream.year3 || 0,
-          growthRate: 0, // Calculate growth rate
-          arDays: 0 // Not in DB schema
+          growthRate: 0,
+          arDays: 0
         }));
 
-        // Calculate growth rates for loaded streams
         defaultData.revenueStreams = defaultData.revenueStreams.map(stream => {
           if (stream.year1 > 0 && stream.year2 > 0) {
             return {
@@ -232,7 +266,6 @@ export const useFinancialData = (userId: string | undefined) => {
         });
       }
 
-      // Map taxation data
       if (taxationResult.data && taxationResult.data.length > 0) {
         const taxData = taxationResult.data[0];
         defaultData.taxation = {
@@ -254,7 +287,6 @@ export const useFinancialData = (userId: string | undefined) => {
         };
       }
 
-      // Map loans data
       if (loansFinancingResult.data && loansFinancingResult.data.length > 0) {
         defaultData.loansAndFinancing.loans = loansFinancingResult.data.map(loan => ({
           id: loan.id,
@@ -270,7 +302,6 @@ export const useFinancialData = (userId: string | undefined) => {
         }));
       }
 
-      // Map Balance Sheet Assets
       if (balanceSheetAssetsResult.data && balanceSheetAssetsResult.data.length > 0) {
         defaultData.costs.balanceSheet.fixedAssets.assets = balanceSheetAssetsResult.data.map(asset => ({
           id: asset.id,
@@ -281,7 +312,6 @@ export const useFinancialData = (userId: string | undefined) => {
           isFromCapitalizedPayroll: asset.is_from_capitalized_payroll || false
         }));
 
-        // Calculate totals for balance sheet assets
         let year1Total = 0, year2Total = 0, year3Total = 0;
         defaultData.costs.balanceSheet.fixedAssets.assets.forEach(asset => {
           const annualDepreciation = asset.cost / asset.usefulLife;
@@ -295,7 +325,6 @@ export const useFinancialData = (userId: string | undefined) => {
         defaultData.costs.balanceSheet.fixedAssets.year3 = Math.max(0, year3Total);
       }
 
-      // Map Accounts Receivable Configuration
       if (accountsReceivableResult.data && accountsReceivableResult.data.length > 0) {
         const arConfig: { [key: string]: any } = {};
         accountsReceivableResult.data.forEach(ar => {
@@ -312,7 +341,6 @@ export const useFinancialData = (userId: string | undefined) => {
         
         defaultData.costs.balanceSheet.accountsReceivable.revenueStreamARs = arConfig;
         
-        // Calculate totals
         const totalYear1 = Object.values(arConfig).reduce((sum: number, ar: any) => sum + ar.year1, 0);
         const totalYear2 = Object.values(arConfig).reduce((sum: number, ar: any) => sum + ar.year2, 0);
         const totalYear3 = Object.values(arConfig).reduce((sum: number, ar: any) => sum + ar.year3, 0);
@@ -322,7 +350,6 @@ export const useFinancialData = (userId: string | undefined) => {
         defaultData.costs.balanceSheet.accountsReceivable.totalYear3 = totalYear3;
       }
 
-      // Map operational expenses employees
       if (operationalEmployeesResult.data && operationalEmployeesResult.data.length > 0) {
         defaultData.costs.team.employees = operationalEmployeesResult.data.map(employee => ({
           id: employee.id,
@@ -334,7 +361,6 @@ export const useFinancialData = (userId: string | undefined) => {
         }));
       }
 
-      // Map operational expenses consultants
       if (operationalConsultantsResult.data && operationalConsultantsResult.data.length > 0) {
         defaultData.costs.team.consultants = operationalConsultantsResult.data.map(consultant => ({
           id: consultant.id,
@@ -346,15 +372,19 @@ export const useFinancialData = (userId: string | undefined) => {
       }
 
       setFinancialData(defaultData);
+      setLoadingState('complete');
+      console.log('💼 Financial Data: Loading complete');
 
     } catch (error) {
-      console.error('Error loading financial data:', error);
+      console.error('💼 Financial Data: Error loading:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error occurred');
       toast({
         title: "Error Loading Data",
         description: "Failed to load your financial data. Creating new model.",
         variant: "destructive"
       });
       setFinancialData(createDefaultFinancialData());
+      setLoadingState('error');
     } finally {
       setLoading(false);
     }
@@ -395,15 +425,12 @@ export const useFinancialData = (userId: string | undefined) => {
     if (!userId || !currentModelId) return;
 
     try {
-      // Save revenue streams
-      // Always delete existing streams first to handle removals
       await supabase
         .from('revenue_streams')
         .delete()
         .eq('financial_model_id', currentModelId);
 
       if (data.revenueStreams.length > 0) {
-        // Insert new streams
         await supabase
           .from('revenue_streams')
           .insert(
@@ -417,15 +444,12 @@ export const useFinancialData = (userId: string | undefined) => {
           );
       }
 
-      // Save taxation data with new structure
       if (data.taxation) {
-        // Delete existing taxation first
         await supabase
           .from('taxation')
           .delete()
           .eq('financial_model_id', currentModelId);
 
-        // Insert new taxation using new columns
         await supabase
           .from('taxation')
           .insert([{
@@ -441,22 +465,18 @@ export const useFinancialData = (userId: string | undefined) => {
             zakat_year1: data.taxation.zakat.year1,
             zakat_year2: data.taxation.zakat.year2,
             zakat_year3: data.taxation.zakat.year3,
-            // Keep legacy columns for compatibility
             legacy_corporate_tax_rate: data.taxation.incomeTax.corporateRate,
             vat_rate: data.taxation.zakat.rate,
             other_taxes: 0
           }]);
       }
 
-      // Save loans data
       if (data.loansAndFinancing.loans.length > 0) {
-        // Delete existing loans first
         await supabase
           .from('loans_financing')
           .delete()
           .eq('financial_model_id', currentModelId);
 
-        // Insert new loans
         await supabase
           .from('loans_financing')
           .insert(
@@ -493,7 +513,6 @@ export const useFinancialData = (userId: string | undefined) => {
 
     setFinancialData(newData);
     
-    // Auto-save only the specific section that changed
     setTimeout(() => {
       saveSpecificSection(section, data);
     }, 1000);
@@ -503,7 +522,6 @@ export const useFinancialData = (userId: string | undefined) => {
     if (!userId || !currentModelId) return;
 
     try {
-      // Only save the specific section that changed
       if (section === 'revenueStreams') {
         await supabase
           .from('revenue_streams')
@@ -544,7 +562,6 @@ export const useFinancialData = (userId: string | undefined) => {
             zakat_year1: data.zakat.year1,
             zakat_year2: data.zakat.year2,
             zakat_year3: data.zakat.year3,
-            // Keep legacy columns for compatibility
             legacy_corporate_tax_rate: data.incomeTax.corporateRate,
             vat_rate: data.zakat.rate,
             other_taxes: 0
@@ -569,15 +586,12 @@ export const useFinancialData = (userId: string | undefined) => {
             );
         }
       } else if (section === 'costs') {
-        // Handle Balance Sheet assets saving
         if (data.balanceSheet && data.balanceSheet.fixedAssets) {
-          // Delete existing assets first
           await supabase
             .from('balance_sheet_assets')
             .delete()
             .eq('financial_model_id', currentModelId);
 
-          // Insert new assets
           if (data.balanceSheet.fixedAssets.assets.length > 0) {
             await supabase
               .from('balance_sheet_assets')
@@ -594,15 +608,12 @@ export const useFinancialData = (userId: string | undefined) => {
           }
         }
 
-        // Handle Accounts Receivable configuration saving
         if (data.balanceSheet && data.balanceSheet.accountsReceivable) {
-          // Delete existing AR configuration first
           await supabase
             .from('accounts_receivable')
             .delete()
             .eq('financial_model_id', currentModelId);
 
-          // Insert new AR configuration
           const arEntries = Object.entries(data.balanceSheet.accountsReceivable.revenueStreamARs || {});
           if (arEntries.length > 0) {
             await supabase
@@ -617,9 +628,7 @@ export const useFinancialData = (userId: string | undefined) => {
           }
         }
 
-        // Handle operational expenses team saving
         if (data.team) {
-          // Save employees
           await supabase
             .from('operational_expenses_employees')
             .delete()
@@ -640,7 +649,6 @@ export const useFinancialData = (userId: string | undefined) => {
               );
           }
 
-          // Save consultants
           await supabase
             .from('operational_expenses_consultants')
             .delete()
@@ -661,19 +669,16 @@ export const useFinancialData = (userId: string | undefined) => {
           }
         }
       }
-      // For other sections we don't save to database yet
 
     } catch (error) {
       console.error(`Error saving ${section}:`, error);
     }
   };
 
-  // New functions for Cap Table and Fund Utilization
   const saveCapTableData = async (stakeholders: any[], safeAgreements: any[]) => {
     if (!userId || !currentModelId) return;
 
     try {
-      // Save stakeholders
       await supabase
         .from('cap_table_stakeholders')
         .delete()
@@ -694,7 +699,6 @@ export const useFinancialData = (userId: string | undefined) => {
           );
       }
 
-      // Save SAFE agreements
       await supabase
         .from('safe_agreements')
         .delete()
@@ -767,6 +771,13 @@ export const useFinancialData = (userId: string | undefined) => {
     }
   };
 
+  const resetSetup = () => {
+    console.log('💼 Financial Data: Resetting setup');
+    setCompanyData(null);
+    setIndustry("");
+    setFinancialData(createDefaultFinancialData());
+  };
+
   return {
     financialData,
     loading,
@@ -778,6 +789,12 @@ export const useFinancialData = (userId: string | undefined) => {
     industry,
     setIndustry,
     saveCapTableData,
-    saveFundUtilizationData
+    saveFundUtilizationData,
+    resetSetup,
+    debugInfo: {
+      loadingState,
+      error,
+      currentModelId
+    }
   };
 };

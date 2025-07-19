@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import BalanceSheet from "@/components/BalanceSheet";
 import CompanySetup from "@/components/CompanySetup";
 import FinancialModelAgent from "@/components/FinancialModelAgent";
-import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, LogOut, Bot } from "lucide-react";
+import DebugPanel from "@/components/DebugPanel";
+import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, LogOut, Bot, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFinancialData } from "@/hooks/useFinancialData";
 import { useToast } from "@/components/ui/use-toast";
@@ -26,7 +27,7 @@ export interface FinancialData {
     year2: number;
     year3: number;
     growthRate: number;
-    arDays: number; // Individual AR days per revenue stream
+    arDays: number;
   }[];
   costs: {
     revenueStreamCosts: {
@@ -69,7 +70,7 @@ export interface FinancialData {
         tripsPerMonth: number;
         domesticCostPerTrip: number;
         internationalCostPerTrip: number;
-        domesticTripsRatio: number; // percentage of domestic vs international
+        domesticTripsRatio: number;
         year1: number; year2: number; year3: number;
       };
       insurance: { 
@@ -96,7 +97,7 @@ export interface FinancialData {
           id: string;
           name: string;
           cost: number;
-          usefulLife: number; // in years
+          usefulLife: number;
           assetClass: 'tangible' | 'intangible';
           isFromCapitalizedPayroll?: boolean;
           linkedEmployeeId?: string;
@@ -105,7 +106,7 @@ export interface FinancialData {
       };
       accountsReceivable: {
         revenueStreamARs: {
-          [key: string]: { // revenue stream name as key
+          [key: string]: {
             arDays: number;
             year1: number;
             year2: number;
@@ -185,7 +186,7 @@ export interface FinancialData {
     designation: string;
     department: 'technology' | 'sales' | 'marketing' | 'operations' | 'hr' | 'finance' | 'other';
     salary: number;
-    isCapitalized?: boolean; // For technology department
+    isCapitalized?: boolean;
   }[];
   funding: {
     totalFunding: number;
@@ -199,7 +200,7 @@ export interface FinancialData {
 }
 
 const Index = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, debugInfo: authDebug } = useAuth();
   const { 
     financialData, 
     loading, 
@@ -207,21 +208,33 @@ const Index = () => {
     companyData, 
     setCompanyData, 
     industry, 
-    setIndustry 
+    setIndustry,
+    resetSetup,
+    debugInfo: financialDebug
   } = useFinancialData(user?.id);
   const [activeTab, setActiveTab] = useState("income-statement");
   const [showAIAgent, setShowAIAgent] = useState(false);
+  const [forceShowChoices, setForceShowChoices] = useState(false);
   const { toast } = useToast();
+
+  console.log('🎯 Index: Render state', {
+    user: !!user,
+    loading,
+    financialData: !!financialData,
+    companyData: !!companyData,
+    showAIAgent,
+    forceShowChoices
+  });
 
   const handleAIDataGenerated = async (generatedData: any) => {
     try {
-      // Set company data first
+      console.log('🤖 AI Data Generated:', generatedData);
+      
       if (generatedData.companyData) {
         setCompanyData(generatedData.companyData);
         setIndustry(generatedData.companyData.industry);
       }
 
-      // Map and save each section of financial data
       if (generatedData.revenueStreams) {
         const mappedRevenue = generatedData.revenueStreams.map((stream: any) => ({
           ...stream,
@@ -241,7 +254,6 @@ const Index = () => {
           marketing: { isPercentageOfRevenue: true, percentageOfRevenue: 10, manualBudget: { year1: 0, year2: 0, year3: 0 }, digitalAdvertising: { year1: 0, year2: 0, year3: 0 }, contentCreation: { year1: 0, year2: 0, year3: 0 }, events: { year1: 0, year2: 0, year3: 0 }, pr: { year1: 0, year2: 0, year3: 0 }, brandingDesign: { year1: 0, year2: 0, year3: 0 }, tools: { year1: 0, year2: 0, year3: 0 }, other: { year1: 0, year2: 0, year3: 0 } }
         };
         
-        // Add cost structures to admin.other
         const totalCostsByYear = generatedData.costStructures.reduce((acc: any, cost: any) => {
           acc.year1 += cost.year1 || 0;
           acc.year2 += cost.year2 || 0;
@@ -272,16 +284,11 @@ const Index = () => {
         await updateFinancialData('employees', mappedEmployees);
       }
 
-      // Save other data sections
-      if (generatedData.capTableStakeholders) {
-        // This would need to be handled by the Valuation component
-      }
-
       if (generatedData.fundUtilization) {
         const totalFunding = generatedData.fundUtilization.reduce((acc: number, item: any) => acc + (item.amount || 0), 0);
         await updateFinancialData('funding', {
           totalFunding,
-          burnRate: totalFunding / 24, // 24 month runway
+          burnRate: totalFunding / 24,
           useOfFunds: generatedData.fundUtilization.map((item: any) => ({
             category: item.category,
             percentage: item.percentage || 0,
@@ -311,6 +318,7 @@ const Index = () => {
       }
 
       setShowAIAgent(false);
+      setForceShowChoices(false);
       setActiveTab("income-statement");
       
     } catch (error) {
@@ -323,25 +331,93 @@ const Index = () => {
     }
   };
 
-  // Show loading while data is being fetched
+  const handleResetSetup = () => {
+    console.log('🔄 Resetting setup');
+    resetSetup();
+    setForceShowChoices(true);
+    setShowAIAgent(false);
+    setActiveTab("income-statement");
+  };
+
+  const handleRefreshData = () => {
+    console.log('🔄 Refreshing data');
+    window.location.reload();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading your financial data...</p>
+          <p className="text-slate-600 mb-2">Loading your financial data...</p>
+          {financialDebug?.loadingState && (
+            <p className="text-xs text-slate-500">
+              Status: {financialDebug.loadingState.replace(/_/g, ' ')}
+            </p>
+          )}
         </div>
+        <DebugPanel
+          authDebug={authDebug}
+          financialDebug={financialDebug}
+          onRefresh={handleRefreshData}
+          onReset={handleResetSetup}
+        />
       </div>
     );
   }
 
-  // Show message if no financial data yet
+  if (!financialData && financialDebug?.error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-5 h-5" />
+              Loading Error
+            </CardTitle>
+            <CardDescription>
+              Unable to load your financial data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-3 bg-red-50 rounded-lg text-sm text-red-700">
+              {financialDebug.error}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleRefreshData} className="flex-1">
+                Try Again
+              </Button>
+              <Button variant="outline" onClick={handleResetSetup} className="flex-1">
+                Reset Setup
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        <DebugPanel
+          authDebug={authDebug}
+          financialDebug={financialDebug}
+          onRefresh={handleRefreshData}
+          onReset={handleResetSetup}
+        />
+      </div>
+    );
+  }
+
   if (!financialData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-slate-600">Unable to load financial data. Please try again.</p>
+          <Button onClick={handleRefreshData} className="mt-4">
+            Retry
+          </Button>
         </div>
+        <DebugPanel
+          authDebug={authDebug}
+          financialDebug={financialDebug}
+          onRefresh={handleRefreshData}
+          onReset={handleResetSetup}
+        />
       </div>
     );
   }
@@ -349,7 +425,6 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-4xl font-bold text-slate-800 mb-2">
@@ -374,65 +449,103 @@ const Index = () => {
           </div>
         </div>
 
-        {/* AI Agent or Company Setup or Main Content */}
         {showAIAgent ? (
           <FinancialModelAgent 
             onDataGenerated={handleAIDataGenerated}
-            onSwitchToManual={() => setShowAIAgent(false)}
+            onSwitchToManual={() => {
+              setShowAIAgent(false);
+              setForceShowChoices(true);
+            }}
           />
-        ) : !companyData ? (
+        ) : (!companyData || forceShowChoices) ? (
           <div className="space-y-6">
-            {/* Choice Card */}
-            <Card className="max-w-2xl mx-auto">
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl mb-2">Welcome to Financial Model Builder</CardTitle>
+            <Card className="max-w-2xl mx-auto shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+              <CardHeader className="text-center bg-gradient-to-r from-primary/5 to-blue-50 rounded-t-xl">
+                <CardTitle className="text-2xl mb-2 flex items-center justify-center gap-3">
+                  <Bot className="w-8 h-8 text-primary" />
+                  Welcome to Financial Model Builder
+                </CardTitle>
                 <CardDescription>
                   Choose how you'd like to create your financial model
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Button
                     variant="outline"
-                    className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-primary/5"
-                    onClick={() => setShowAIAgent(true)}
+                    className="h-32 flex flex-col items-center justify-center gap-4 hover:bg-primary/5 border-2 hover:border-primary/20 transition-all duration-200"
+                    onClick={() => {
+                      setShowAIAgent(true);
+                      setForceShowChoices(false);
+                    }}
                   >
-                    <Bot className="h-6 w-6 text-primary" />
+                    <Bot className="h-8 w-8 text-primary" />
                     <div className="text-center">
-                      <div className="font-semibold">AI Financial Agent</div>
-                      <div className="text-xs text-muted-foreground">Describe your needs, get instant model</div>
+                      <div className="font-semibold text-lg">AI Financial Agent</div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Describe your needs, get instant model
+                      </div>
+                      <div className="text-xs text-primary mt-2 font-medium">
+                        ✨ Recommended for quick setup
+                      </div>
                     </div>
                   </Button>
                   
                   <Button
                     variant="outline"
-                    className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-primary/5"
-                    onClick={() => setShowAIAgent(false)}
+                    className="h-32 flex flex-col items-center justify-center gap-4 hover:bg-slate-50 border-2 hover:border-slate-200 transition-all duration-200"
+                    onClick={() => {
+                      setShowAIAgent(false);
+                      setForceShowChoices(false);
+                    }}
                   >
-                    <FileText className="h-6 w-6 text-primary" />
+                    <FileText className="h-8 w-8 text-slate-600" />
                     <div className="text-center">
-                      <div className="font-semibold">Manual Entry</div>
-                      <div className="text-xs text-muted-foreground">Build step-by-step manually</div>
+                      <div className="font-semibold text-lg">Manual Entry</div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Build step-by-step manually
+                      </div>
+                      <div className="text-xs text-slate-600 mt-2">
+                        Full control over every detail
+                      </div>
                     </div>
                   </Button>
                 </div>
+                
+                {companyData && (
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-700 mb-2">
+                      <strong>Existing setup found:</strong> {companyData.companyName}
+                    </p>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => setForceShowChoices(false)}
+                      className="text-blue-600 p-0 h-auto"
+                    >
+                      Continue with existing setup →
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            <CompanySetup onSetupComplete={(data) => {
-              setCompanyData(data);
-              setIndustry(data.industry);
-              
-              // If it's CyberLabs demo, load demo financial data
-              if (data.companyName === "CyberLabs") {
-                const demoData = createCyberLabsDemoData();
-                Object.keys(demoData).forEach(key => {
-                  updateFinancialData(key as keyof FinancialData, demoData[key as keyof FinancialData]);
-                });
-              }
-              
-              setActiveTab("income-statement");
-            }} />
+            {!forceShowChoices && (
+              <CompanySetup onSetupComplete={(data) => {
+                setCompanyData(data);
+                setIndustry(data.industry);
+                
+                if (data.companyName === "CyberLabs") {
+                  const demoData = createCyberLabsDemoData();
+                  Object.keys(demoData).forEach(key => {
+                    updateFinancialData(key as keyof FinancialData, demoData[key as keyof FinancialData]);
+                  });
+                }
+                
+                setActiveTab("income-statement");
+                setForceShowChoices(false);
+              }} />
+            )}
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -459,18 +572,26 @@ const Index = () => {
                   </div>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="flex items-center gap-2"
-                onClick={() => {
-                  setCompanyData(null);
-                  setIndustry("");
-                }}
-              >
-                <Settings className="w-4 h-4" />
-                Edit Setup
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={() => setForceShowChoices(true)}
+                >
+                  <Bot className="w-4 h-4" />
+                  AI Agent
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={handleResetSetup}
+                >
+                  <Settings className="w-4 h-4" />
+                  Reset Setup
+                </Button>
+              </div>
             </div>
             
             <div className="bg-white rounded-xl shadow-lg border border-slate-200/60 p-2">
@@ -648,6 +769,13 @@ const Index = () => {
             </TabsContent>
           </Tabs>
         )}
+
+        <DebugPanel
+          authDebug={authDebug}
+          financialDebug={financialDebug}
+          onRefresh={handleRefreshData}
+          onReset={handleResetSetup}
+        />
       </div>
     </div>
   );
