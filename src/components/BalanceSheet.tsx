@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,10 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Building, CreditCard, Banknote, Package } from "lucide-react";
+import { Plus, Trash2, Building, CreditCard, Banknote, Package, Save } from "lucide-react";
 import { FinancialData } from "@/pages/Index";
 import { useFinancialData } from "@/hooks/useFinancialData";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 
 interface BalanceSheetProps {
@@ -23,17 +24,25 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
   const [selectedRevenueStream, setSelectedRevenueStream] = useState(revenueStreams[0]?.name || '');
   const { user } = useAuth();
   const { updateFinancialData } = useFinancialData(user?.id);
+  const { toast } = useToast();
 
-  // Auto-save balance sheet data changes to database
-  useEffect(() => {
+  const handleSave = async () => {
     if (user?.id && data) {
-      const timeoutId = setTimeout(() => {
-        updateFinancialData('costs', { balanceSheet: data });
-      }, 1000); // Auto-save after 1 second of inactivity
-
-      return () => clearTimeout(timeoutId);
+      try {
+        await updateFinancialData('costs', { balanceSheet: data });
+        toast({
+          title: "Balance Sheet Saved",
+          description: "Your balance sheet data has been saved successfully.",
+        });
+      } catch (error) {
+        toast({
+          title: "Save Error",
+          description: "Failed to save balance sheet data.",
+          variant: "destructive"
+        });
+      }
     }
-  }, [data, user?.id, updateFinancialData]);
+  };
 
   const updateFixedAssets = (assets: FinancialData['costs']['balanceSheet']['fixedAssets']['assets']) => {
     // Calculate total cost and depreciation
@@ -140,7 +149,16 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
   };
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Balance Sheet</h2>
+        <Button onClick={handleSave} className="flex items-center gap-2">
+          <Save className="w-4 h-4" />
+          Save Balance Sheet
+        </Button>
+      </div>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
       <TabsList className="grid w-full grid-cols-6">
         <TabsTrigger value="fixed-assets" className="flex items-center gap-2">
           <Building className="w-4 h-4" />
@@ -671,7 +689,8 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ data, onChange, revenueStre
           </Card>
         </div>
       </TabsContent>
-    </Tabs>
+      </Tabs>
+    </div>
   );
 };
 

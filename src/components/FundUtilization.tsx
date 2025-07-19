@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts';
-import { DollarSign, TrendingDown, Calendar, Target, Trash2, Plus } from 'lucide-react';
+import { DollarSign, TrendingDown, Calendar, Target, Trash2, Plus, Save } from 'lucide-react';
 import { useFinancialData } from "@/hooks/useFinancialData";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface FundAllocation {
   id: string;
@@ -33,8 +34,6 @@ interface RunwayData {
 }
 
 const FundUtilization = () => {
-  const { user } = useAuth();
-  const { saveFundUtilizationData } = useFinancialData(user?.id);
   
   const [totalFunding, setTotalFunding] = useState(2000000);
   const [fundAllocations, setFundAllocations] = useState<FundAllocation[]>([
@@ -155,10 +154,13 @@ const FundUtilization = () => {
     })));
   }, [totalFunding]);
 
-  // Auto-save fund utilization data to database when it changes
-  useEffect(() => {
+  const { user } = useAuth();
+  const { saveFundUtilizationData } = useFinancialData(user?.id);
+  const { toast } = useToast();
+
+  const handleSave = async () => {
     if (user?.id && fundAllocations.length > 0) {
-      const timeoutId = setTimeout(() => {
+      try {
         const mappedAllocations = fundAllocations.map(allocation => ({
           category: allocation.category,
           description: allocation.description,
@@ -166,12 +168,20 @@ const FundUtilization = () => {
           percentage: allocation.percentage,
           timeline: allocation.timeframe
         }));
-        saveFundUtilizationData(mappedAllocations);
-      }, 1000); // Auto-save after 1 second of inactivity
-
-      return () => clearTimeout(timeoutId);
+        await saveFundUtilizationData(mappedAllocations);
+        toast({
+          title: "Fund Utilization Saved",
+          description: "Your fund utilization data has been saved successfully.",
+        });
+      } catch (error) {
+        toast({
+          title: "Save Error",
+          description: "Failed to save fund utilization data.",
+          variant: "destructive"
+        });
+      }
     }
-  }, [fundAllocations, user?.id, saveFundUtilizationData]);
+  };
 
   const totalAllocated = fundAllocations.reduce((sum, allocation) => sum + allocation.amount, 0);
   const remainingFunds = totalFunding - totalAllocated;
@@ -214,6 +224,14 @@ const FundUtilization = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Fund Utilization</h2>
+        <Button onClick={handleSave} className="flex items-center gap-2">
+          <Save className="w-4 h-4" />
+          Save Fund Utilization
+        </Button>
+      </div>
+      
       <Tabs defaultValue="allocation" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="allocation">Fund Allocation</TabsTrigger>

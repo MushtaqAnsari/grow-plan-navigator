@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Trash2, Plus, Users, TrendingUp, Percent, Calculator, FileText, Settings, Share2 } from 'lucide-react';
-import { useFinancialData } from "@/hooks/useFinancialData";
-import { useAuth } from "@/hooks/useAuth";
+import { Trash2, Plus, Users, TrendingUp, Percent, Calculator, FileText, Settings, Share2, Save } from 'lucide-react';
+import { useFinancialData } from '@/hooks/useFinancialData';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface Stakeholder {
   id: string;
@@ -85,6 +86,7 @@ interface CapTableData {
 const ValuationModel = () => {
   const { user } = useAuth();
   const { saveCapTableData } = useFinancialData(user?.id);
+  const { toast } = useToast();
   const [capTableData, setCapTableData] = useState<CapTableData>({
     companyName: "Your Startup",
     shareClasses: [
@@ -191,16 +193,23 @@ const ValuationModel = () => {
     .filter(safe => safe.status === 'active')
     .reduce((sum, safe) => sum + safe.amount, 0);
 
-  // Auto-save cap table data to database when it changes
-  useEffect(() => {
+  const handleSaveCapTable = async () => {
     if (user?.id && capTableData.stakeholders.length > 0) {
-      const timeoutId = setTimeout(() => {
-        saveCapTableData(capTableData.stakeholders, capTableData.safeAgreements);
-      }, 1000); // Auto-save after 1 second of inactivity
-
-      return () => clearTimeout(timeoutId);
+      try {
+        await saveCapTableData(capTableData.stakeholders, capTableData.safeAgreements);
+        toast({
+          title: "Cap Table Saved",
+          description: "Your cap table data has been saved successfully.",
+        });
+      } catch (error) {
+        toast({
+          title: "Save Error",
+          description: "Failed to save cap table data.",
+          variant: "destructive"
+        });
+      }
     }
-  }, [capTableData.stakeholders, capTableData.safeAgreements, user?.id, saveCapTableData]);
+  };
 
   const calculateOwnershipPercentages = () => {
     return capTableData.stakeholders.map(stakeholder => ({
@@ -306,6 +315,10 @@ const ValuationModel = () => {
           <p className="text-muted-foreground">Professional equity management and scenario modeling</p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={handleSaveCapTable} className="flex items-center gap-2">
+            <Save className="w-4 h-4" />
+            Save Cap Table
+          </Button>
           <Button variant="outline" size="sm">
             <Share2 className="w-4 h-4 mr-2" />
             Share View
