@@ -211,7 +211,8 @@ const Index = () => {
     industry, 
     setIndustry,
     resetSetup,
-    debugInfo: financialDebug
+    debugInfo: financialDebug,
+    currentModelId
   } = useFinancialData(user?.id);
   
   const dataError = financialDebug?.error;
@@ -696,6 +697,8 @@ const Index = () => {
               <IncomeStatement 
                 data={financialData}
                 onUpdateData={updateFinancialData}
+                financialModelId={currentModelId || ''}
+                userId={user?.id || ''}
               />
             </TabsContent>
 

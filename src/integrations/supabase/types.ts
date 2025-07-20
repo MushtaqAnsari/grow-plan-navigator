@@ -22,6 +22,7 @@ export type Database = {
           id: string
           revenue_stream_name: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           ar_days?: number | null
@@ -30,6 +31,7 @@ export type Database = {
           id?: string
           revenue_stream_name: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           ar_days?: number | null
@@ -38,8 +40,17 @@ export type Database = {
           id?: string
           revenue_stream_name?: string
           updated_at?: string
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       balance_sheet_assets: {
         Row: {
@@ -52,6 +63,7 @@ export type Database = {
           is_from_capitalized_payroll: boolean | null
           updated_at: string
           useful_life: number | null
+          user_id: string
         }
         Insert: {
           asset_class?: string | null
@@ -63,6 +75,7 @@ export type Database = {
           is_from_capitalized_payroll?: boolean | null
           updated_at?: string
           useful_life?: number | null
+          user_id: string
         }
         Update: {
           asset_class?: string | null
@@ -74,8 +87,17 @@ export type Database = {
           is_from_capitalized_payroll?: boolean | null
           updated_at?: string
           useful_life?: number | null
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "balance_sheet_assets_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cap_table_stakeholders: {
         Row: {
@@ -88,6 +110,7 @@ export type Database = {
           shares: number | null
           type: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -99,6 +122,7 @@ export type Database = {
           shares?: number | null
           type?: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -110,8 +134,17 @@ export type Database = {
           shares?: number | null
           type?: string
           updated_at?: string
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cap_table_stakeholders_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cost_structures: {
         Row: {
@@ -120,6 +153,7 @@ export type Database = {
           id: string
           name: string
           updated_at: string
+          user_id: string
           year1: number | null
           year2: number | null
           year3: number | null
@@ -132,6 +166,7 @@ export type Database = {
           id?: string
           name: string
           updated_at?: string
+          user_id: string
           year1?: number | null
           year2?: number | null
           year3?: number | null
@@ -144,6 +179,7 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+          user_id?: string
           year1?: number | null
           year2?: number | null
           year3?: number | null
@@ -160,6 +196,48 @@ export type Database = {
           },
         ]
       }
+      direct_costs: {
+        Row: {
+          cost_name: string | null
+          cost_type: string
+          created_at: string
+          financial_model_id: string
+          id: string
+          revenue_stream_name: string
+          updated_at: string
+          user_id: string
+          year1: number | null
+          year2: number | null
+          year3: number | null
+        }
+        Insert: {
+          cost_name?: string | null
+          cost_type: string
+          created_at?: string
+          financial_model_id: string
+          id?: string
+          revenue_stream_name: string
+          updated_at?: string
+          user_id: string
+          year1?: number | null
+          year2?: number | null
+          year3?: number | null
+        }
+        Update: {
+          cost_name?: string | null
+          cost_type?: string
+          created_at?: string
+          financial_model_id?: string
+          id?: string
+          revenue_stream_name?: string
+          updated_at?: string
+          user_id?: string
+          year1?: number | null
+          year2?: number | null
+          year3?: number | null
+        }
+        Relationships: []
+      }
       employee_planning: {
         Row: {
           created_at: string
@@ -168,6 +246,7 @@ export type Database = {
           role: string
           salary_per_employee: number | null
           updated_at: string
+          user_id: string
           year1: number | null
           year2: number | null
           year3: number | null
@@ -181,6 +260,7 @@ export type Database = {
           role: string
           salary_per_employee?: number | null
           updated_at?: string
+          user_id: string
           year1?: number | null
           year2?: number | null
           year3?: number | null
@@ -194,6 +274,7 @@ export type Database = {
           role?: string
           salary_per_employee?: number | null
           updated_at?: string
+          user_id?: string
           year1?: number | null
           year2?: number | null
           year3?: number | null
@@ -254,6 +335,7 @@ export type Database = {
           percentage: number | null
           timeline: string | null
           updated_at: string
+          user_id: string
         }
         Insert: {
           amount?: number | null
@@ -265,6 +347,7 @@ export type Database = {
           percentage?: number | null
           timeline?: string | null
           updated_at?: string
+          user_id: string
         }
         Update: {
           amount?: number | null
@@ -276,8 +359,17 @@ export type Database = {
           percentage?: number | null
           timeline?: string | null
           updated_at?: string
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fund_utilization_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loans_financing: {
         Row: {
@@ -289,6 +381,7 @@ export type Database = {
           term_years: number | null
           type: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           amount?: number | null
@@ -299,6 +392,7 @@ export type Database = {
           term_years?: number | null
           type: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           amount?: number | null
@@ -309,6 +403,7 @@ export type Database = {
           term_years?: number | null
           type?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -327,6 +422,7 @@ export type Database = {
           id: string
           name: string
           updated_at: string
+          user_id: string
           year1: number | null
           year2: number | null
           year3: number | null
@@ -339,6 +435,7 @@ export type Database = {
           id?: string
           name: string
           updated_at?: string
+          user_id: string
           year1?: number | null
           year2?: number | null
           year3?: number | null
@@ -351,6 +448,7 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+          user_id?: string
           year1?: number | null
           year2?: number | null
           year3?: number | null
@@ -377,6 +475,7 @@ export type Database = {
           monthly_cost: number
           name: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -387,6 +486,7 @@ export type Database = {
           monthly_cost?: number
           name: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -397,8 +497,17 @@ export type Database = {
           monthly_cost?: number
           name?: string
           updated_at?: string
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "operational_expenses_consultants_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       operational_expenses_employees: {
         Row: {
@@ -411,6 +520,7 @@ export type Database = {
           name: string
           salary: number
           updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -422,6 +532,7 @@ export type Database = {
           name: string
           salary?: number
           updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -433,8 +544,17 @@ export type Database = {
           name?: string
           salary?: number
           updated_at?: string
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "operational_expenses_employees_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       revenue_streams: {
         Row: {
@@ -443,6 +563,7 @@ export type Database = {
           id: string
           name: string
           updated_at: string
+          user_id: string
           year1: number | null
           year2: number | null
           year3: number | null
@@ -455,6 +576,7 @@ export type Database = {
           id?: string
           name: string
           updated_at?: string
+          user_id: string
           year1?: number | null
           year2?: number | null
           year3?: number | null
@@ -467,6 +589,7 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+          user_id?: string
           year1?: number | null
           year2?: number | null
           year3?: number | null
@@ -493,6 +616,7 @@ export type Database = {
           investor_name: string
           is_converted: boolean | null
           updated_at: string
+          user_id: string
           valuation_cap: number | null
         }
         Insert: {
@@ -504,6 +628,7 @@ export type Database = {
           investor_name: string
           is_converted?: boolean | null
           updated_at?: string
+          user_id: string
           valuation_cap?: number | null
         }
         Update: {
@@ -515,9 +640,18 @@ export type Database = {
           investor_name?: string
           is_converted?: boolean | null
           updated_at?: string
+          user_id?: string
           valuation_cap?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "safe_agreements_financial_model_id_fkey"
+            columns: ["financial_model_id"]
+            isOneToOne: false
+            referencedRelation: "financial_models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       taxation: {
         Row: {
@@ -532,6 +666,7 @@ export type Database = {
           income_tax_year3: number | null
           other_taxes: number | null
           updated_at: string
+          user_id: string
           vat_rate: number | null
           zakat_calculation_method: string | null
           zakat_enabled: boolean | null
@@ -552,6 +687,7 @@ export type Database = {
           income_tax_year3?: number | null
           other_taxes?: number | null
           updated_at?: string
+          user_id: string
           vat_rate?: number | null
           zakat_calculation_method?: string | null
           zakat_enabled?: boolean | null
@@ -572,6 +708,7 @@ export type Database = {
           income_tax_year3?: number | null
           other_taxes?: number | null
           updated_at?: string
+          user_id?: string
           vat_rate?: number | null
           zakat_calculation_method?: string | null
           zakat_enabled?: boolean | null

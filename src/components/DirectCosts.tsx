@@ -4,9 +4,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Save } from 'lucide-react';
+import { Plus, Save, Trash2 } from 'lucide-react';
 import { FinancialData } from "@/pages/Index";
 import { formatCurrency } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface RevenueStream {
   name: string;
@@ -16,18 +18,38 @@ interface RevenueStream {
   year3: number;
 }
 
+interface DirectCost {
+  id?: string;
+  revenue_stream_name: string;
+  cost_type: string;
+  cost_name?: string;
+  year1: number;
+  year2: number;
+  year3: number;
+}
+
 interface DirectCostsProps {
   data: FinancialData['costs']['revenueStreamCosts'];
   onChange: (data: FinancialData['costs']['revenueStreamCosts']) => void;
   revenueStreams: RevenueStream[];
+  financialModelId: string;
+  userId: string;
 }
 
-const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStreams }) => {
+const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStreams, financialModelId, userId }) => {
   const [showAddCustom, setShowAddCustom] = useState(false);
   const [newCostName, setNewCostName] = useState('');
   const [newCostType, setNewCostType] = useState<'cogs' | 'processing' | 'fulfillment'>('cogs');
   const [localData, setLocalData] = useState(data);
   const [hasChanges, setHasChanges] = useState(false);
+  const [directCosts, setDirectCosts] = useState<DirectCost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Load direct costs from database
+  useEffect(() => {
+    loadDirectCosts();
+  }, [financialModelId]);
 
   // Sync localData with props when data changes
   useEffect(() => {
@@ -85,9 +107,109 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
     setShowAddCustom(false);
   };
 
-  const handleSave = () => {
-    onChange(localData);
-    setHasChanges(false);
+  const loadDirectCosts = async () => {
+    try {
+      setLoading(true);
+      const { data: costs, error } = await supabase
+        .from('direct_costs')
+        .select('*')
+        .eq('financial_model_id', financialModelId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      setDirectCosts(costs || []);
+    } catch (error) {
+      console.error('Error loading direct costs:', error);
+      toast({
+        title: "Error Loading Direct Costs",
+        description: "Failed to load your direct costs from the database.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      // Convert localData to DirectCost format for saving
+      const costsToSave: DirectCost[] = [];
+      
+      Object.entries(localData).forEach(([streamName, streamData]) => {
+        Object.entries(streamData.directCosts).forEach(([costType, costData]) => {
+          costsToSave.push({
+            revenue_stream_name: streamName,
+            cost_type: costType,
+            cost_name: ['cogs', 'processing', 'fulfillment'].includes(costType) ? null : costType,
+            year1: costData.year1 || 0,
+            year2: costData.year2 || 0,
+            year3: costData.year3 || 0,
+          });
+        });
+      });
+
+      // Delete existing costs for this financial model
+      await supabase
+        .from('direct_costs')
+        .delete()
+        .eq('financial_model_id', financialModelId)
+        .eq('user_id', userId);
+
+      // Insert new costs
+      if (costsToSave.length > 0) {
+        const { error } = await supabase
+          .from('direct_costs')
+          .insert(
+            costsToSave.map(cost => ({
+              ...cost,
+              financial_model_id: financialModelId,
+              user_id: userId,
+            }))
+          );
+
+        if (error) throw error;
+      }
+
+      await loadDirectCosts();
+      onChange(localData);
+      setHasChanges(false);
+      
+      toast({
+        title: "Direct Costs Saved",
+        description: "Your direct costs have been saved successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving direct costs:', error);
+      toast({
+        title: "Error Saving Direct Costs",
+        description: "Failed to save your direct costs. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteCost = async (costId: string) => {
+    try {
+      const { error } = await supabase
+        .from('direct_costs')
+        .delete()
+        .eq('id', costId);
+
+      if (error) throw error;
+      
+      await loadDirectCosts();
+      toast({
+        title: "Direct Cost Deleted",
+        description: "The direct cost has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Error deleting direct cost:', error);
+      toast({
+        title: "Error Deleting Direct Cost",
+        description: "Failed to delete the direct cost. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getDirectCostTypes = (streamType: string) => {
@@ -300,6 +422,55 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
             </CardContent>
           </Card>
         ))
+      )}
+
+      {/* Saved Direct Costs from Database */}
+      {directCosts.length > 0 && (
+        <Card className="bg-green-50 border-green-200">
+          <CardHeader>
+            <CardTitle className="text-green-800 flex items-center gap-2">
+              Saved Direct Costs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {directCosts.map((cost) => (
+                <div key={cost.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                  <div className="flex-1 grid grid-cols-5 gap-4 items-center">
+                    <div>
+                      <div className="font-medium">{cost.revenue_stream_name}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600 capitalize">
+                        {cost.cost_name || cost.cost_type.replace('_', ' ')}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-medium">{formatCurrency(cost.year1)}</div>
+                      <div className="text-xs text-gray-500">Year 1</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-medium">{formatCurrency(cost.year2)}</div>
+                      <div className="text-xs text-gray-500">Year 2</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-medium">{formatCurrency(cost.year3)}</div>
+                      <div className="text-xs text-gray-500">Year 3</div>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => cost.id && deleteCost(cost.id)}
+                    className="ml-4 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Summary */}

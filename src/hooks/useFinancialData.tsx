@@ -459,6 +459,7 @@ export const useFinancialData = (userId: string | undefined) => {
           .insert(
             data.revenueStreams.map(stream => ({
               financial_model_id: currentModelId,
+              user_id: userId,
               name: stream.name,
               year1: stream.year1,
               year2: stream.year2,
@@ -477,6 +478,7 @@ export const useFinancialData = (userId: string | undefined) => {
           .from('taxation')
           .insert([{
             financial_model_id: currentModelId,
+            user_id: userId,
             income_tax_enabled: data.taxation.incomeTax.enabled,
             income_tax_rate: data.taxation.incomeTax.corporateRate,
             income_tax_year1: data.taxation.incomeTax.year1,
@@ -488,7 +490,7 @@ export const useFinancialData = (userId: string | undefined) => {
             zakat_year1: data.taxation.zakat.year1,
             zakat_year2: data.taxation.zakat.year2,
             zakat_year3: data.taxation.zakat.year3,
-            legacy_corporate_tax_rate: data.taxation.incomeTax.corporateRate,
+            corporate_tax_rate: data.taxation.incomeTax.corporateRate,
             vat_rate: data.taxation.zakat.rate,
             other_taxes: 0
           }]);
@@ -505,6 +507,7 @@ export const useFinancialData = (userId: string | undefined) => {
           .insert(
             data.loansAndFinancing.loans.map(loan => ({
               financial_model_id: currentModelId,
+              user_id: userId,
               type: loan.type,
               amount: loan.principalAmount,
               interest_rate: loan.interestRate,
@@ -557,6 +560,7 @@ export const useFinancialData = (userId: string | undefined) => {
             .insert(
               data.map((stream: any) => ({
                 financial_model_id: currentModelId,
+                user_id: userId,
                 name: stream.name,
                 year1: stream.year1,
                 year2: stream.year2,
@@ -574,6 +578,7 @@ export const useFinancialData = (userId: string | undefined) => {
           .from('taxation')
           .insert([{
             financial_model_id: currentModelId,
+            user_id: userId,
             income_tax_enabled: data.incomeTax.enabled,
             income_tax_rate: data.incomeTax.corporateRate,
             income_tax_year1: data.incomeTax.year1,
@@ -585,7 +590,7 @@ export const useFinancialData = (userId: string | undefined) => {
             zakat_year1: data.zakat.year1,
             zakat_year2: data.zakat.year2,
             zakat_year3: data.zakat.year3,
-            legacy_corporate_tax_rate: data.incomeTax.corporateRate,
+            corporate_tax_rate: data.incomeTax.corporateRate,
             vat_rate: data.zakat.rate,
             other_taxes: 0
           }]);
@@ -601,6 +606,7 @@ export const useFinancialData = (userId: string | undefined) => {
             .insert(
               data.loans.map((loan: any) => ({
                 financial_model_id: currentModelId,
+                user_id: userId,
                 type: loan.type,
                 amount: loan.principalAmount,
                 interest_rate: loan.interestRate,
@@ -621,6 +627,7 @@ export const useFinancialData = (userId: string | undefined) => {
               .insert(
                 data.balanceSheet.fixedAssets.assets.map((asset: any) => ({
                   financial_model_id: currentModelId,
+                  user_id: userId,
                   asset_name: asset.name,
                   asset_cost: asset.cost,
                   useful_life: asset.usefulLife,
@@ -644,6 +651,7 @@ export const useFinancialData = (userId: string | undefined) => {
               .insert(
                 arEntries.map(([streamName, arData]: [string, any]) => ({
                   financial_model_id: currentModelId,
+                  user_id: userId,
                   revenue_stream_name: streamName,
                   ar_days: arData.arDays || 30
                 }))
@@ -663,6 +671,7 @@ export const useFinancialData = (userId: string | undefined) => {
               .insert(
                 data.team.employees.map((employee: any) => ({
                   financial_model_id: currentModelId,
+                  user_id: userId,
                   name: employee.name,
                   designation: employee.designation,
                   department: employee.department,
@@ -683,6 +692,7 @@ export const useFinancialData = (userId: string | undefined) => {
               .insert(
                 data.team.consultants.map((consultant: any) => ({
                   financial_model_id: currentModelId,
+                  user_id: userId,
                   name: consultant.name,
                   designation: consultant.designation,
                   department: consultant.department,
@@ -713,6 +723,7 @@ export const useFinancialData = (userId: string | undefined) => {
           .insert(
             stakeholders.map(stakeholder => ({
               financial_model_id: currentModelId,
+              user_id: userId,
               name: stakeholder.name,
               type: stakeholder.type,
               shares: stakeholder.shares,
@@ -733,6 +744,7 @@ export const useFinancialData = (userId: string | undefined) => {
           .insert(
             safeAgreements.map(safe => ({
               financial_model_id: currentModelId,
+              user_id: userId,
               investor_name: safe.investorName,
               amount: safe.amount,
               valuation_cap: safe.valuationCap,
@@ -771,6 +783,7 @@ export const useFinancialData = (userId: string | undefined) => {
           .insert(
             useOfFunds.map(fund => ({
               financial_model_id: currentModelId,
+              user_id: userId,
               category: fund.category,
               description: fund.description,
               amount: fund.amount,
@@ -814,6 +827,7 @@ export const useFinancialData = (userId: string | undefined) => {
     saveCapTableData,
     saveFundUtilizationData,
     resetSetup,
+    currentModelId,
     debugInfo: {
       loadingState,
       error,

@@ -15,9 +15,11 @@ import { TrendingUp, DollarSign, BarChart3, Users, FileText, Calculator, Receipt
 interface IncomeStatementProps {
   data: FinancialData;
   onUpdateData: (section: keyof FinancialData, data: any) => void;
+  financialModelId: string;
+  userId: string;
 }
 
-const IncomeStatement: React.FC<IncomeStatementProps> = ({ data, onUpdateData }) => {
+const IncomeStatement: React.FC<IncomeStatementProps> = ({ data, onUpdateData, financialModelId, userId }) => {
   const updateFinancialData = (field: string, value: any) => {
     onUpdateData(field as keyof FinancialData, value);
   };
@@ -90,6 +92,8 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ data, onUpdateData })
               <DirectCosts 
                 data={data.costs.revenueStreamCosts}
                 revenueStreams={data.revenueStreams}
+                financialModelId={financialModelId}
+                userId={userId}
                 onChange={(costs) => updateFinancialData('costs', {
                   ...data.costs,
                   revenueStreamCosts: costs
