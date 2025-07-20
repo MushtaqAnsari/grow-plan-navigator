@@ -24,8 +24,18 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
   };
 
   const calculateOperationalExpenses = (year: 'year1' | 'year2' | 'year3') => {
-    // Calculate team costs from employees and consultants
-    const employeeCosts = data.costs.team.employees?.reduce((sum, emp) => sum + emp.salary, 0) || 0;
+    // Calculate team costs from employees and consultants with salary increases
+    let employeeCosts = data.costs.team.employees?.reduce((sum, emp) => sum + emp.salary, 0) || 0;
+    
+    // Apply salary increases if they exist
+    if (data.costs.admin.salaryIncreases) {
+      if (year === 'year2' && data.costs.admin.salaryIncreases.year2) {
+        employeeCosts = data.costs.admin.salaryIncreases.year2;
+      } else if (year === 'year3' && data.costs.admin.salaryIncreases.year3) {
+        employeeCosts = data.costs.admin.salaryIncreases.year3;
+      }
+    }
+    
     const consultantCosts = data.costs.team.consultants?.reduce((sum, cons) => sum + (cons.monthlyCost * 12), 0) || 0;
     const benefitsCosts = ((employeeCosts + consultantCosts) * (data.costs.team.healthCare.percentage + data.costs.team.benefits.percentage) / 100) + 
                          (data.costs.team.healthCare.amount + data.costs.team.benefits.amount + data.costs.team.iqama.amount) * 12;
@@ -80,8 +90,18 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
   const expenseBreakdownData = [1, 2, 3].map(year => {
     const yearKey = `year${year}` as 'year1' | 'year2' | 'year3';
     
-    // Calculate team costs properly
-    const employeeCosts = data.costs.team.employees?.reduce((sum, emp) => sum + emp.salary, 0) || 0;
+    // Calculate team costs properly with salary increases
+    let employeeCosts = data.costs.team.employees?.reduce((sum, emp) => sum + emp.salary, 0) || 0;
+    
+    // Apply salary increases if they exist
+    if (data.costs.admin.salaryIncreases) {
+      if (yearKey === 'year2' && data.costs.admin.salaryIncreases.year2) {
+        employeeCosts = data.costs.admin.salaryIncreases.year2;
+      } else if (yearKey === 'year3' && data.costs.admin.salaryIncreases.year3) {
+        employeeCosts = data.costs.admin.salaryIncreases.year3;
+      }
+    }
+    
     const consultantCosts = data.costs.team.consultants?.reduce((sum, cons) => sum + (cons.monthlyCost * 12), 0) || 0;
     const benefitsCosts = ((employeeCosts + consultantCosts) * (data.costs.team.healthCare.percentage + data.costs.team.benefits.percentage) / 100) + 
                          (data.costs.team.healthCare.amount + data.costs.team.benefits.amount + data.costs.team.iqama.amount) * 12;

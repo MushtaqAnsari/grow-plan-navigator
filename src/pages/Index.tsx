@@ -98,6 +98,7 @@ export interface FinancialData {
         year1: number; year2: number; year3: number;
       };
       other: { year1: number; year2: number; year3: number; };
+      salaryIncreases?: { year1: number; year2: number; year3: number; year4: number; year5: number; };
     };
     balanceSheet: {
       fixedAssets: {

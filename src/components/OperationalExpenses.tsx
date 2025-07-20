@@ -63,6 +63,67 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     year4: 0,
     year5: 0
   });
+  
+  // Function to apply salary increases to all employees
+  const applySalaryIncreases = () => {
+    if (!data.team.employees.length) {
+      alert('No employees found to apply salary increases to.');
+      return;
+    }
+
+    // Calculate updated salary expenses for operational planning
+    const updatedData = { ...data };
+    
+    // Calculate total salary costs for each year including increases
+    let totalSalaryYear1 = 0;
+    let totalSalaryYear2 = 0;
+    let totalSalaryYear3 = 0;
+    let totalSalaryYear4 = 0;
+    let totalSalaryYear5 = 0;
+
+    data.team.employees.forEach(employee => {
+      const baseSalary = employee.salary;
+      totalSalaryYear1 += baseSalary;
+      
+      // Apply cumulative increases year over year
+      let currentSalary = baseSalary;
+      
+      if (effectivePlanningPeriod >= 2) {
+        currentSalary = currentSalary * (1 + salaryIncreaseSettings.year2 / 100);
+        totalSalaryYear2 += currentSalary;
+      }
+      
+      if (effectivePlanningPeriod >= 3) {
+        currentSalary = currentSalary * (1 + salaryIncreaseSettings.year3 / 100);
+        totalSalaryYear3 += currentSalary;
+      }
+      
+      if (effectivePlanningPeriod >= 4) {
+        currentSalary = currentSalary * (1 + salaryIncreaseSettings.year4 / 100);
+        totalSalaryYear4 += currentSalary;
+      }
+      
+      if (effectivePlanningPeriod === 5) {
+        currentSalary = currentSalary * (1 + salaryIncreaseSettings.year5 / 100);
+        totalSalaryYear5 += currentSalary;
+      }
+    });
+
+    // Store the calculated salary increases in admin.salaryIncreases
+    updatedData.admin = {
+      ...updatedData.admin,
+      salaryIncreases: {
+        year1: totalSalaryYear1,
+        year2: totalSalaryYear2,
+        year3: totalSalaryYear3,
+        year4: totalSalaryYear4,
+        year5: totalSalaryYear5
+      }
+    };
+
+    onChange(updatedData);
+    alert('Salary increases have been applied successfully! These will now be reflected in your EBITDA analysis.');
+  };
 
   // Check if designation is technology-related
   const isTechnologyRole = (designation: string) => {
@@ -731,6 +792,11 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                     />
                   </div>
                 )}
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button onClick={applySalaryIncreases} className="bg-green-600 hover:bg-green-700">
+                  Apply Salary Increases
+                </Button>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
                 These percentages will be applied to all employee salaries for each respective year.
