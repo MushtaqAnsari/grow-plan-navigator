@@ -433,41 +433,89 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {directCosts.map((cost) => (
-                <div key={cost.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                  <div className="flex-1 grid grid-cols-5 gap-4 items-center">
-                    <div>
-                      <div className="font-medium">{cost.revenue_stream_name}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-600 capitalize">
-                        {cost.cost_name || cost.cost_type.replace('_', ' ')}
+            <div className="space-y-6">
+              {Object.entries(
+                directCosts.reduce((grouped, cost) => {
+                  if (!grouped[cost.revenue_stream_name]) {
+                    grouped[cost.revenue_stream_name] = [];
+                  }
+                  grouped[cost.revenue_stream_name].push(cost);
+                  return grouped;
+                }, {} as Record<string, DirectCost[]>)
+              ).map(([streamName, costs]) => (
+                <div key={streamName} className="border border-green-200 rounded-lg p-4 bg-white">
+                  <h3 className="font-semibold text-lg text-gray-800 mb-4 border-b border-green-100 pb-2">
+                    {streamName}
+                  </h3>
+                  <div className="space-y-3">
+                    {costs.map((cost) => (
+                      <div key={cost.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md border border-gray-200">
+                        <div className="flex-1 grid grid-cols-4 gap-4 items-center">
+                          <div>
+                            <div className="font-medium text-gray-700 capitalize">
+                              {cost.cost_name || cost.cost_type.replace('_', ' ')}
+                            </div>
+                            <div className="text-xs text-gray-500">Cost Type</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-sm font-medium text-gray-800">{formatCurrency(cost.year1)}</div>
+                            <div className="text-xs text-gray-500">Year 1</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-sm font-medium text-gray-800">{formatCurrency(cost.year2)}</div>
+                            <div className="text-xs text-gray-500">Year 2</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-sm font-medium text-gray-800">{formatCurrency(cost.year3)}</div>
+                            <div className="text-xs text-gray-500">Year 3</div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => cost.id && deleteCost(cost.id)}
+                          className="ml-4 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Subtotal for this revenue stream */}
+                  <div className="mt-4 pt-3 border-t border-green-200">
+                    <div className="flex items-center justify-between text-sm font-medium text-green-700">
+                      <span>Subtotal for {streamName}:</span>
+                      <div className="flex gap-6">
+                        <span>{formatCurrency(costs.reduce((sum, cost) => sum + cost.year1, 0))}</span>
+                        <span>{formatCurrency(costs.reduce((sum, cost) => sum + cost.year2, 0))}</span>
+                        <span>{formatCurrency(costs.reduce((sum, cost) => sum + cost.year3, 0))}</span>
                       </div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-sm font-medium">{formatCurrency(cost.year1)}</div>
-                      <div className="text-xs text-gray-500">Year 1</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm font-medium">{formatCurrency(cost.year2)}</div>
-                      <div className="text-xs text-gray-500">Year 2</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm font-medium">{formatCurrency(cost.year3)}</div>
-                      <div className="text-xs text-gray-500">Year 3</div>
-                    </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => cost.id && deleteCost(cost.id)}
-                    className="ml-4 text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
                 </div>
               ))}
+              
+              {/* Grand Total */}
+              <div className="bg-green-100 border border-green-300 rounded-lg p-4">
+                <div className="flex items-center justify-between font-semibold text-green-800">
+                  <span className="text-lg">Total Direct Costs:</span>
+                  <div className="flex gap-8 text-lg">
+                    <div className="text-center">
+                      <div>{formatCurrency(directCosts.reduce((sum, cost) => sum + cost.year1, 0))}</div>
+                      <div className="text-xs font-normal">Year 1</div>
+                    </div>
+                    <div className="text-center">
+                      <div>{formatCurrency(directCosts.reduce((sum, cost) => sum + cost.year2, 0))}</div>
+                      <div className="text-xs font-normal">Year 2</div>
+                    </div>
+                    <div className="text-center">
+                      <div>{formatCurrency(directCosts.reduce((sum, cost) => sum + cost.year3, 0))}</div>
+                      <div className="text-xs font-normal">Year 3</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
