@@ -51,6 +51,14 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   const [isAddingBenefit, setIsAddingBenefit] = useState(false);
   const [newBenefitName, setNewBenefitName] = useState('');
   const [newBenefitType, setNewBenefitType] = useState<'fixed' | 'percentage'>('fixed');
+  
+  // Salary increase management
+  const [salaryIncreaseSettings, setSalaryIncreaseSettings] = useState({
+    year2: 0,
+    year3: 0,
+    year4: 0,
+    year5: 0
+  });
 
   // Check if designation is technology-related
   const isTechnologyRole = (designation: string) => {
@@ -103,9 +111,9 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   };
 
   const saveEditEmployee = (employeeId: string) => {
-    // Validate required fields
-    if (!editEmployeeValues.name?.trim() || !editEmployeeValues.designation?.trim()) {
-      alert('Please fill in both name and designation before saving.');
+    // Validate required fields (only designation is mandatory)
+    if (!editEmployeeValues.designation?.trim()) {
+      alert('Please fill in designation before saving.');
       return;
     }
 
@@ -201,9 +209,9 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   };
 
   const saveEditConsultant = (consultantId: string) => {
-    // Validate required fields
-    if (!editConsultantValues.name?.trim() || !editConsultantValues.designation?.trim()) {
-      alert('Please fill in both name and designation before saving.');
+    // Validate required fields (only designation is mandatory)
+    if (!editConsultantValues.designation?.trim()) {
+      alert('Please fill in designation before saving.');
       return;
     }
 
@@ -657,6 +665,64 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                   No employees added yet. Click "Add Employee" to start.
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Salary Increase Settings */}
+          <Card className="border-l-4 border-l-green-500">
+            <CardHeader>
+              <CardTitle className="text-lg">Annual Salary Increase Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <Label>Year 2 Increase (%)</Label>
+                  <Input
+                    type="number"
+                    value={salaryIncreaseSettings.year2}
+                    onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year2: Number(e.target.value)})}
+                    placeholder="0"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+                <div>
+                  <Label>Year 3 Increase (%)</Label>
+                  <Input
+                    type="number"
+                    value={salaryIncreaseSettings.year3}
+                    onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year3: Number(e.target.value)})}
+                    placeholder="0"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+                <div>
+                  <Label>Year 4 Increase (%)</Label>
+                  <Input
+                    type="number"
+                    value={salaryIncreaseSettings.year4}
+                    onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year4: Number(e.target.value)})}
+                    placeholder="0"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+                <div>
+                  <Label>Year 5 Increase (%)</Label>
+                  <Input
+                    type="number"
+                    value={salaryIncreaseSettings.year5}
+                    onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year5: Number(e.target.value)})}
+                    placeholder="0"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                These percentages will be applied to all employee salaries for each respective year.
+              </p>
             </CardContent>
           </Card>
 
