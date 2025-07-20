@@ -39,12 +39,18 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   const [editEmployeeValues, setEditEmployeeValues] = useState<any>({});
   const [editConsultantValues, setEditConsultantValues] = useState<any>({});
   
-  // Calculation methods for benefits
-  const [calculationMethods, setCalculationMethods] = useState({
-    healthCare: 'fixed' as 'fixed' | 'percentage',
-    benefits: 'fixed' as 'fixed' | 'percentage',
-    iqama: 'fixed' as 'fixed' | 'percentage'
-  });
+  // Employee benefits management
+  const [employeeBenefits, setEmployeeBenefits] = useState<Array<{
+    id: string;
+    name: string;
+    calculationType: 'fixed' | 'percentage';
+    amount: number;
+    percentage: number;
+  }>>([]);
+  
+  const [isAddingBenefit, setIsAddingBenefit] = useState(false);
+  const [newBenefitName, setNewBenefitName] = useState('');
+  const [newBenefitType, setNewBenefitType] = useState<'fixed' | 'percentage'>('fixed');
 
   // Check if designation is technology-related
   const isTechnologyRole = (designation: string) => {
@@ -145,45 +151,6 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     setEditEmployeeValues({});
   };
 
-  const updateEmployee = (id: string, field: string, value: any) => {
-    const updatedEmployees = data.team.employees.map(emp => 
-      emp.id === id ? { ...emp, [field]: value } : emp
-    );
-    
-    // Check if we're updating designation to a technology role
-    if (field === 'designation' && isTechnologyRole(value)) {
-      const updatedEmployee = updatedEmployees.find(emp => emp.id === id);
-      if (updatedEmployee && updatedEmployee.salary > 0) {
-        setPendingEmployee(updatedEmployee);
-        setIpAssetName(`IP Development - ${value}`);
-        setIpAssetCost(updatedEmployee.salary * 0.3); // Suggest 30% of salary as IP cost
-        setShowIPDialog(true);
-      }
-    }
-
-    // Check if we're capitalizing an employee as IP
-    if (field === 'isCapitalized' && value === true) {
-      const employee = updatedEmployees.find(emp => emp.id === id);
-      if (employee && employee.department === 'technology' && employee.salary > 0) {
-        const assetName = `Inhouse Development - ${employee.designation || 'Technology Role'}`;
-        const assetCost = employee.salary * 0.3; // 30% of annual salary for IP development
-        
-        // Directly add the intangible asset if callback provided
-        if (onAddIntangibleAsset) {
-          onAddIntangibleAsset(assetName, assetCost);
-        }
-      }
-    }
-    
-    onChange({
-      ...data,
-      team: {
-        ...data.team,
-        employees: updatedEmployees
-      }
-    });
-  };
-
   const removeEmployee = (id: string) => {
     onChange({
       ...data,
@@ -261,18 +228,6 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     setEditConsultantValues({});
   };
 
-  const updateConsultant = (id: string, field: string, value: any) => {
-    onChange({
-      ...data,
-      team: {
-        ...data.team,
-        consultants: data.team.consultants.map(consultant => 
-          consultant.id === id ? { ...consultant, [field]: value } : consultant
-        )
-      }
-    });
-  };
-
   const removeConsultant = (id: string) => {
     onChange({
       ...data,
@@ -283,29 +238,48 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     });
   };
 
-  // Update team line items
-  const updateTeamLineItem = (item: 'healthCare' | 'benefits' | 'iqama', field: 'amount' | 'percentage', value: number) => {
-    onChange({
-      ...data,
-      team: {
-        ...data.team,
-        [item]: {
-          ...data.team[item],
-          [field]: value
-        }
-      }
-    });
+  // Employee benefits management functions
+  const addEmployeeBenefit = () => {
+    if (!newBenefitName.trim()) return;
+    
+    const newBenefit = {
+      id: Date.now().toString(),
+      name: newBenefitName,
+      calculationType: newBenefitType,
+      amount: 0,
+      percentage: 0
+    };
+    
+    setEmployeeBenefits([...employeeBenefits, newBenefit]);
+    setNewBenefitName('');
+    setIsAddingBenefit(false);
+  };
+
+  const updateEmployeeBenefit = (id: string, field: keyof typeof employeeBenefits[0], value: any) => {
+    setEmployeeBenefits(employeeBenefits.map(benefit => 
+      benefit.id === id ? { ...benefit, [field]: value } : benefit
+    ));
+  };
+
+  const removeEmployeeBenefit = (id: string) => {
+    setEmployeeBenefits(employeeBenefits.filter(benefit => benefit.id !== id));
+  };
+
+  // Calculate cost per employee for a benefit
+  const getBenefitCostPerEmployee = (benefit: typeof employeeBenefits[0]) => {
+    const totalEmployees = getTotalEmployees();
+    if (totalEmployees === 0) return 0;
+    
+    if (benefit.calculationType === 'fixed') {
+      return benefit.amount * 12; // Monthly to annual
+    } else {
+      const avgSalary = data.team.employees.reduce((sum, emp) => sum + emp.salary, 0) / totalEmployees;
+      return (avgSalary * benefit.percentage) / 100;
+    }
   };
 
   // Calculate costs per employee
   const getTotalEmployees = () => data.team.employees.length;
-
-  const getLineItemCostPerYear = (item: 'healthCare' | 'benefits' | 'iqama', year: 'year1' | 'year2' | 'year3') => {
-    const totalEmployees = getTotalEmployees();
-    const itemData = data.team[item];
-    const annualCostPerEmployee = (itemData.amount * 12) + (itemData.percentage / 100) * data.team.employees.reduce((sum, emp) => sum + emp.salary, 0) / totalEmployees;
-    return totalEmployees * annualCostPerEmployee;
-  };
 
   // Department report calculations with distributed costs
   const getDepartmentReport = () => {
@@ -314,9 +288,7 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
       consultantCount: number;
       totalSalary: number; 
       totalConsultantCost: number;
-      totalHealthCare: number;
-      totalBenefits: number;
-      totalIqama: number;
+      totalBenefitsCost: number;
       totalCost: number;
       employees: any[];
       consultants: any[];
@@ -330,9 +302,7 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
           consultantCount: 0,
           totalSalary: 0, 
           totalConsultantCost: 0,
-          totalHealthCare: 0,
-          totalBenefits: 0,
-          totalIqama: 0,
+          totalBenefitsCost: 0,
           totalCost: 0,
           employees: [],
           consultants: []
@@ -351,9 +321,7 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
           consultantCount: 0,
           totalSalary: 0, 
           totalConsultantCost: 0,
-          totalHealthCare: 0,
-          totalBenefits: 0,
-          totalIqama: 0,
+          totalBenefitsCost: 0,
           totalCost: 0,
           employees: [],
           consultants: []
@@ -364,22 +332,23 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
       departments[consultant.department].consultants.push(consultant);
     });
 
-    // Distribute line item costs by employee count in each department
+    // Distribute benefits costs by employee count in each department
     const totalEmployees = getTotalEmployees();
     if (totalEmployees > 0) {
       Object.keys(departments).forEach(dept => {
         const deptEmployeeCount = departments[dept].employeeCount;
         const ratio = deptEmployeeCount / totalEmployees;
         
-        departments[dept].totalHealthCare = getLineItemCostPerYear('healthCare', 'year1') * ratio;
-        departments[dept].totalBenefits = getLineItemCostPerYear('benefits', 'year1') * ratio;
-        departments[dept].totalIqama = getLineItemCostPerYear('iqama', 'year1') * ratio;
+        // Calculate total benefits cost for all employees
+        const totalBenefitsCost = employeeBenefits.reduce((sum, benefit) => {
+          return sum + (getBenefitCostPerEmployee(benefit) * totalEmployees);
+        }, 0);
+        
+        departments[dept].totalBenefitsCost = totalBenefitsCost * ratio;
         
         departments[dept].totalCost = departments[dept].totalSalary + 
                                     departments[dept].totalConsultantCost +
-                                    departments[dept].totalHealthCare +
-                                    departments[dept].totalBenefits +
-                                    departments[dept].totalIqama;
+                                    departments[dept].totalBenefitsCost;
       });
     }
 
@@ -507,200 +476,138 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
     return totalCost;
   };
 
-  const updateMarketingCost = (
-    category: keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue'>, 
-    year: 'year1' | 'year2' | 'year3', 
-    value: number
-  ) => {
-    onChange({
-      ...data,
-      marketing: {
-        ...data.marketing,
-        [category]: {
-          ...data.marketing[category],
-          [year]: value
-        }
-      }
-    });
-  };
-
-  const updateMarketingMode = (isPercentageOfRevenue: boolean) => {
-    onChange({
-      ...data,
-      marketing: {
-        ...data.marketing,
-        isPercentageOfRevenue
-      }
-    });
-  };
-
-  const updateMarketingPercentage = (percentage: number) => {
-    onChange({
-      ...data,
-      marketing: {
-        ...data.marketing,
-        percentageOfRevenue: percentage
-      }
-    });
-  };
-
-  const getTotalRevenue = (year: 'year1' | 'year2' | 'year3') => {
-    return revenueStreams.reduce((sum, stream) => sum + stream[year], 0);
-  };
-
-  const getMarketingBudget = (year: 'year1' | 'year2' | 'year3') => {
-    if (data.marketing.isPercentageOfRevenue) {
-      return getTotalRevenue(year) * (data.marketing.percentageOfRevenue / 100);
+  const confirmIPAsset = () => {
+    if (onAddIntangibleAsset && ipAssetName && ipAssetCost > 0) {
+      onAddIntangibleAsset(ipAssetName, ipAssetCost);
     }
-    return data.marketing.manualBudget[year];
+    setShowIPDialog(false);
+    setPendingEmployee(null);
+    setIpAssetName('');
+    setIpAssetCost(0);
   };
 
-  const adminCategories = [
-    { key: 'legal' as keyof FinancialData['costs']['admin'], label: 'Legal & Professional Services', color: 'border-yellow-500' },
-    { key: 'accounting' as keyof FinancialData['costs']['admin'], label: 'Accounting & Bookkeeping', color: 'border-indigo-500' },
-    { key: 'other' as keyof FinancialData['costs']['admin'], label: 'Other Admin Expenses', color: 'border-cyan-500' }
-  ];
-
-  const marketingCategories = [
-    { key: 'digitalAdvertising' as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue'>, label: 'Digital Advertising', color: 'border-blue-500' },
-    { key: 'contentCreation' as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue'>, label: 'Content Creation', color: 'border-green-500' },
-    { key: 'events' as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue'>, label: 'Events & Conferences', color: 'border-purple-500' },
-    { key: 'pr' as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue'>, label: 'Public Relations', color: 'border-orange-500' },
-    { key: 'brandingDesign' as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue'>, label: 'Branding & Design', color: 'border-red-500' },
-    { key: 'tools' as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue'>, label: 'Marketing Tools & Software', color: 'border-yellow-500' },
-    { key: 'other' as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue'>, label: 'Other Marketing Expenses', color: 'border-gray-500' }
-  ];
-
-  const departmentOptions = [
-    { value: 'technology', label: 'Technology' },
-    { value: 'sales', label: 'Sales' },
-    { value: 'marketing', label: 'Marketing' },
-    { value: 'operations', label: 'Operations' },
-    { value: 'hr', label: 'Human Resources' },
-    { value: 'finance', label: 'Finance' },
-    { value: 'other', label: 'Other' }
-  ];
+  const declineIPAsset = () => {
+    setShowIPDialog(false);
+    setPendingEmployee(null);
+    setIpAssetName('');
+    setIpAssetCost(0);
+  };
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Users className="w-6 h-6" />
+            Operational Expenses
+          </CardTitle>
+        </CardHeader>
+      </Card>
+
       <Tabs defaultValue="team" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="admin">Admin</TabsTrigger>
-          <TabsTrigger value="marketing">Marketing</TabsTrigger>
+          <TabsTrigger value="team">Team & Personnel</TabsTrigger>
+          <TabsTrigger value="admin">Administrative</TabsTrigger>
+          <TabsTrigger value="marketing">Marketing & Sales</TabsTrigger>
         </TabsList>
 
         <TabsContent value="team" className="space-y-6">
-          {/* Employee Management Section */}
+          {/* Employees Section */}
           <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Employee Management</CardTitle>
-              <div className="flex gap-2">
-                <Button onClick={() => setShowDepartmentReport(!showDepartmentReport)} variant="outline" size="sm">
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Department Report
-                </Button>
-                <Button onClick={addEmployee} size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Employee
-                </Button>
-              </div>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center justify-between">
+                Employees
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => setShowDepartmentReport(!showDepartmentReport)} 
+                    variant="outline" 
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    {showDepartmentReport ? 'Hide' : 'Show'} Report
+                  </Button>
+                  <Button 
+                    onClick={addEmployee} 
+                    variant="outline" 
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Employee
+                  </Button>
+                </div>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {data.team.employees.map((employee) => (
-                <div key={employee.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-md border border-gray-200">
-                  <div className="flex-1 grid grid-cols-5 gap-4 items-center">
-                    {editingEmployee === employee.id ? (
-                      // Edit mode
-                      <>
-                        <div>
-                          <Label className="text-xs text-gray-500">Name</Label>
-                          <Input
-                            value={editEmployeeValues.name || ''}
-                            onChange={(e) => setEditEmployeeValues({...editEmployeeValues, name: e.target.value})}
-                            className="text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-500">Designation</Label>
-                          <Input
-                            value={editEmployeeValues.designation || ''}
-                            onChange={(e) => setEditEmployeeValues({...editEmployeeValues, designation: e.target.value})}
-                            className="text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-500">Department</Label>
-                          <Select 
-                            value={editEmployeeValues.department || 'other'} 
-                            onValueChange={(value) => setEditEmployeeValues({...editEmployeeValues, department: value})}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {departmentOptions.map(dept => (
-                                <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-500">Annual Salary</Label>
-                          <Input
-                            type="number"
-                            value={editEmployeeValues.salary || 0}
-                            onChange={(e) => setEditEmployeeValues({...editEmployeeValues, salary: Number(e.target.value)})}
-                            className="text-sm"
-                          />
-                        </div>
-                        <div className="flex flex-col items-center">
-                          {editEmployeeValues.department === 'technology' && (
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Switch
-                                checked={editEmployeeValues.isCapitalized || false}
-                                onCheckedChange={(checked) => setEditEmployeeValues({...editEmployeeValues, isCapitalized: checked})}
-                              />
-                              <Label className="text-xs">Capitalize as IP</Label>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      // Display mode
-                      <>
-                        <div>
-                          <div className="font-medium text-gray-700">{employee.name}</div>
-                          <div className="text-xs text-gray-500">Name</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-700">{employee.designation}</div>
-                          <div className="text-xs text-gray-500">Designation</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-700 capitalize">
-                            {departmentOptions.find(d => d.value === employee.department)?.label || employee.department}
-                          </div>
-                          <div className="text-xs text-gray-500">Department</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-700">{formatCurrency(employee.salary || 0)}</div>
-                          <div className="text-xs text-gray-500">Annual Salary</div>
-                        </div>
-                        <div className="flex flex-col items-center">
-                          {employee.department === 'technology' && (
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                checked={employee.isCapitalized || false}
-                                onCheckedChange={(checked) => updateEmployee(employee.id, 'isCapitalized', checked)}
-                              />
-                              <Label className="text-xs">Capitalize as IP</Label>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
+                <div key={employee.id} className="p-4 border rounded-lg space-y-3">
+                  {editingEmployee === employee.id ? (
+                    // Edit mode
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Name</Label>
+                        <Input
+                          value={editEmployeeValues.name || ''}
+                          onChange={(e) => setEditEmployeeValues({...editEmployeeValues, name: e.target.value})}
+                          placeholder="Employee name"
+                        />
+                      </div>
+                      <div>
+                        <Label>Designation</Label>
+                        <Input
+                          value={editEmployeeValues.designation || ''}
+                          onChange={(e) => setEditEmployeeValues({...editEmployeeValues, designation: e.target.value})}
+                          placeholder="Job title"
+                        />
+                      </div>
+                      <div>
+                        <Label>Department</Label>
+                        <Select value={editEmployeeValues.department} onValueChange={(value) => setEditEmployeeValues({...editEmployeeValues, department: value})}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="technology">Technology</SelectItem>
+                            <SelectItem value="sales">Sales</SelectItem>
+                            <SelectItem value="marketing">Marketing</SelectItem>
+                            <SelectItem value="operations">Operations</SelectItem>
+                            <SelectItem value="finance">Finance</SelectItem>
+                            <SelectItem value="hr">Human Resources</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Annual Salary</Label>
+                        <Input
+                          type="number"
+                          value={editEmployeeValues.salary || ''}
+                          onChange={(e) => setEditEmployeeValues({...editEmployeeValues, salary: Number(e.target.value)})}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={editEmployeeValues.isCapitalized || false}
+                          onCheckedChange={(checked) => setEditEmployeeValues({...editEmployeeValues, isCapitalized: checked})}
+                        />
+                        <Label>Capitalize as IP Asset</Label>
+                      </div>
+                    </div>
+                  ) : (
+                    // View mode
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <h4 className="font-medium">{employee.name || 'Unnamed Employee'}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {employee.designation || 'No designation'} • {employee.department} • {formatCurrency(employee.salary)}/year
+                          {employee.isCapitalized && <Badge variant="secondary" className="ml-2">IP Asset</Badge>}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center gap-2 ml-4">
                     {editingEmployee === employee.id ? (
                       <>
@@ -747,7 +654,7 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
               
               {data.team.employees.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
-                  No employees added yet. Click "Add Employee" to start building your team.
+                  No employees added yet. Click "Add Employee" to start.
                 </div>
               )}
             </CardContent>
@@ -755,86 +662,81 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
 
           {/* Consultants Section */}
           <Card className="border-l-4 border-l-purple-500">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Consultants</CardTitle>
-              <Button onClick={addConsultant} size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Consultant
-              </Button>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center justify-between">
+                Consultants
+                <Button 
+                  onClick={addConsultant} 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Consultant
+                </Button>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {data.team.consultants.map((consultant) => (
-                <div key={consultant.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-md border border-gray-200">
-                  <div className="flex-1 grid grid-cols-4 gap-4 items-center">
-                    {editingConsultant === consultant.id ? (
-                      // Edit mode
-                      <>
-                        <div>
-                          <Label className="text-xs text-gray-500">Name</Label>
-                          <Input
-                            value={editConsultantValues.name || ''}
-                            onChange={(e) => setEditConsultantValues({...editConsultantValues, name: e.target.value})}
-                            className="text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-500">Designation</Label>
-                          <Input
-                            value={editConsultantValues.designation || ''}
-                            onChange={(e) => setEditConsultantValues({...editConsultantValues, designation: e.target.value})}
-                            className="text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-500">Department</Label>
-                          <Select 
-                            value={editConsultantValues.department || 'other'} 
-                            onValueChange={(value) => setEditConsultantValues({...editConsultantValues, department: value})}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {departmentOptions.map(dept => (
-                                <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-500">Monthly Cost</Label>
-                          <Input
-                            type="number"
-                            value={editConsultantValues.monthlyCost || 0}
-                            onChange={(e) => setEditConsultantValues({...editConsultantValues, monthlyCost: Number(e.target.value)})}
-                            className="text-sm"
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      // Display mode
-                      <>
-                        <div>
-                          <div className="font-medium text-gray-700">{consultant.name}</div>
-                          <div className="text-xs text-gray-500">Name</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-700">{consultant.designation}</div>
-                          <div className="text-xs text-gray-500">Designation</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-700 capitalize">
-                            {departmentOptions.find(d => d.value === consultant.department)?.label || consultant.department}
-                          </div>
-                          <div className="text-xs text-gray-500">Department</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-700">{formatCurrency(consultant.monthlyCost || 0)}</div>
-                          <div className="text-xs text-gray-500">Monthly Cost</div>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                <div key={consultant.id} className="p-4 border rounded-lg space-y-3">
+                  {editingConsultant === consultant.id ? (
+                    // Edit mode
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Name</Label>
+                        <Input
+                          value={editConsultantValues.name || ''}
+                          onChange={(e) => setEditConsultantValues({...editConsultantValues, name: e.target.value})}
+                          placeholder="Consultant name"
+                        />
+                      </div>
+                      <div>
+                        <Label>Designation</Label>
+                        <Input
+                          value={editConsultantValues.designation || ''}
+                          onChange={(e) => setEditConsultantValues({...editConsultantValues, designation: e.target.value})}
+                          placeholder="Consultant role"
+                        />
+                      </div>
+                      <div>
+                        <Label>Department</Label>
+                        <Select value={editConsultantValues.department} onValueChange={(value) => setEditConsultantValues({...editConsultantValues, department: value})}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="technology">Technology</SelectItem>
+                            <SelectItem value="sales">Sales</SelectItem>
+                            <SelectItem value="marketing">Marketing</SelectItem>
+                            <SelectItem value="operations">Operations</SelectItem>
+                            <SelectItem value="finance">Finance</SelectItem>
+                            <SelectItem value="hr">Human Resources</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Monthly Cost</Label>
+                        <Input
+                          type="number"
+                          value={editConsultantValues.monthlyCost || ''}
+                          onChange={(e) => setEditConsultantValues({...editConsultantValues, monthlyCost: Number(e.target.value)})}
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    // View mode
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <h4 className="font-medium">{consultant.name || 'Unnamed Consultant'}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {consultant.designation || 'No designation'} • {consultant.department} • {formatCurrency(consultant.monthlyCost)}/month
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center gap-2 ml-4">
                     {editingConsultant === consultant.id ? (
                       <>
@@ -887,236 +789,133 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
             </CardContent>
           </Card>
 
-          {/* Employee Benefits Line Items */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Health Care */}
-            <Card className="border-l-4 border-l-green-500">
-              <CardHeader>
-                <CardTitle className="text-lg">Health Care</CardTitle>
-                <p className="text-sm text-gray-500">Cost per employee: ${getTotalEmployees() > 0 ? Math.round(getLineItemCostPerYear('healthCare', 'year1') / getTotalEmployees()) : 0}/year</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Calculation Method</Label>
-                  <Select 
-                    value={calculationMethods.healthCare} 
-                    onValueChange={(value: 'fixed' | 'percentage') => {
-                      setCalculationMethods({...calculationMethods, healthCare: value});
-                      // Reset the other value when switching methods
-                      if (value === 'fixed') {
-                        updateTeamLineItem('healthCare', 'percentage', 0);
-                      } else {
-                        updateTeamLineItem('healthCare', 'amount', 0);
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select calculation method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed">Fixed Amount (Monthly per employee)</SelectItem>
-                      <SelectItem value="percentage">Percentage of Salary</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {calculationMethods.healthCare === 'fixed' ? (
-                  <div>
-                    <Label>Fixed Amount (Monthly per employee)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={data.team.healthCare.amount || ''}
-                      onChange={(e) => updateTeamLineItem('healthCare', 'amount', Number(e.target.value))}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <Label>Percentage of Salary (%)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={data.team.healthCare.percentage || ''}
-                      onChange={(e) => updateTeamLineItem('healthCare', 'percentage', Number(e.target.value))}
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Benefits */}
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader>
-                <CardTitle className="text-lg">Benefits</CardTitle>
-                <p className="text-sm text-gray-500">Cost per employee: ${getTotalEmployees() > 0 ? Math.round(getLineItemCostPerYear('benefits', 'year1') / getTotalEmployees()) : 0}/year</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Calculation Method</Label>
-                  <Select 
-                    value={calculationMethods.benefits} 
-                    onValueChange={(value: 'fixed' | 'percentage') => {
-                      setCalculationMethods({...calculationMethods, benefits: value});
-                      // Reset the other value when switching methods
-                      if (value === 'fixed') {
-                        updateTeamLineItem('benefits', 'percentage', 0);
-                      } else {
-                        updateTeamLineItem('benefits', 'amount', 0);
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select calculation method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed">Fixed Amount (Monthly per employee)</SelectItem>
-                      <SelectItem value="percentage">Percentage of Salary</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {calculationMethods.benefits === 'fixed' ? (
-                  <div>
-                    <Label>Fixed Amount (Monthly per employee)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={data.team.benefits.amount || ''}
-                      onChange={(e) => updateTeamLineItem('benefits', 'amount', Number(e.target.value))}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <Label>Percentage of Salary (%)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={data.team.benefits.percentage || ''}
-                      onChange={(e) => updateTeamLineItem('benefits', 'percentage', Number(e.target.value))}
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Iqama */}
-            <Card className="border-l-4 border-l-orange-500">
-              <CardHeader>
-                <CardTitle className="text-lg">Iqama</CardTitle>
-                <p className="text-sm text-gray-500">Cost per employee: ${getTotalEmployees() > 0 ? Math.round(getLineItemCostPerYear('iqama', 'year1') / getTotalEmployees()) : 0}/year</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Calculation Method</Label>
-                  <Select 
-                    value={calculationMethods.iqama} 
-                    onValueChange={(value: 'fixed' | 'percentage') => {
-                      setCalculationMethods({...calculationMethods, iqama: value});
-                      // Reset the other value when switching methods
-                      if (value === 'fixed') {
-                        updateTeamLineItem('iqama', 'percentage', 0);
-                      } else {
-                        updateTeamLineItem('iqama', 'amount', 0);
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select calculation method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed">Fixed Amount (Monthly per employee)</SelectItem>
-                      <SelectItem value="percentage">Percentage of Salary</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {calculationMethods.iqama === 'fixed' ? (
-                  <div>
-                    <Label>Fixed Amount (Monthly per employee)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={data.team.iqama.amount || ''}
-                      onChange={(e) => updateTeamLineItem('iqama', 'amount', Number(e.target.value))}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <Label>Percentage of Salary (%)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={data.team.iqama.percentage || ''}
-                      onChange={(e) => updateTeamLineItem('iqama', 'percentage', Number(e.target.value))}
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recruitment Costs */}
-          <Card className="border-l-4 border-l-red-500">
+          {/* Employee Benefits Section */}
+          <Card className="border-l-4 border-l-green-500">
             <CardHeader>
-              <CardTitle className="text-lg">Recruitment Costs</CardTitle>
+              <CardTitle className="text-lg flex items-center justify-between">
+                Employee Benefits & Other Costs
+                <Button 
+                  onClick={() => setIsAddingBenefit(!isAddingBenefit)} 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Benefit
+                </Button>
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label>Year 1 ($)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={data.team.recruitment.year1 || ''}
-                    onChange={(e) => onChange({
-                      ...data,
-                      team: {
-                        ...data.team,
-                        recruitment: {
-                          ...data.team.recruitment,
-                          year1: Number(e.target.value)
-                        }
-                      }
-                    })}
-                  />
+            <CardContent className="space-y-4">
+              {isAddingBenefit && (
+                <Card className="p-4 border-dashed">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Benefit Name</Label>
+                        <Input
+                          placeholder="e.g., Health Care, Benefits, Iqama, Training, Recruitment"
+                          value={newBenefitName}
+                          onChange={(e) => setNewBenefitName(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Calculation Type</Label>
+                        <Select value={newBenefitType} onValueChange={(value: 'fixed' | 'percentage') => setNewBenefitType(value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fixed">Fixed Amount (Monthly per employee)</SelectItem>
+                            <SelectItem value="percentage">Percentage of Salary</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={addEmployeeBenefit} size="sm">Add</Button>
+                      <Button onClick={() => setIsAddingBenefit(false)} variant="outline" size="sm">Cancel</Button>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {employeeBenefits.length > 0 && (
+                <div className="space-y-4">
+                  {employeeBenefits.map((benefit) => (
+                    <Card key={benefit.id} className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium">{benefit.name}</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            Cost per employee: {formatCurrency(getBenefitCostPerEmployee(benefit))}/year
+                          </span>
+                          <Button
+                            onClick={() => removeEmployeeBenefit(benefit.id)}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label>Calculation Method</Label>
+                          <Select 
+                            value={benefit.calculationType} 
+                            onValueChange={(value: 'fixed' | 'percentage') => {
+                              updateEmployeeBenefit(benefit.id, 'calculationType', value);
+                              // Reset the other value when switching methods
+                              if (value === 'fixed') {
+                                updateEmployeeBenefit(benefit.id, 'percentage', 0);
+                              } else {
+                                updateEmployeeBenefit(benefit.id, 'amount', 0);
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="fixed">Fixed Amount (Monthly per employee)</SelectItem>
+                              <SelectItem value="percentage">Percentage of Salary</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {benefit.calculationType === 'fixed' ? (
+                          <div>
+                            <Label>Fixed Amount (Monthly per employee)</Label>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={benefit.amount || ''}
+                              onChange={(e) => updateEmployeeBenefit(benefit.id, 'amount', Number(e.target.value))}
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <Label>Percentage of Salary (%)</Label>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={benefit.percentage || ''}
+                              onChange={(e) => updateEmployeeBenefit(benefit.id, 'percentage', Number(e.target.value))}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
                 </div>
-                <div>
-                  <Label>Year 2 ($)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={data.team.recruitment.year2 || ''}
-                    onChange={(e) => onChange({
-                      ...data,
-                      team: {
-                        ...data.team,
-                        recruitment: {
-                          ...data.team.recruitment,
-                          year2: Number(e.target.value)
-                        }
-                      }
-                    })}
-                  />
+              )}
+
+              {employeeBenefits.length === 0 && !isAddingBenefit && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No employee benefits added yet.</p>
+                  <p className="text-sm">Click "Add Benefit" to include health care, benefits, recruitment costs, or other employee-related costs.</p>
                 </div>
-                <div>
-                  <Label>Year 3 ($)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={data.team.recruitment.year3 || ''}
-                    onChange={(e) => onChange({
-                      ...data,
-                      team: {
-                        ...data.team,
-                        recruitment: {
-                          ...data.team.recruitment,
-                          year3: Number(e.target.value)
-                        }
-                      }
-                    })}
-                  />
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1131,26 +930,24 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(getDepartmentReport()).map(([dept, data]) => (
+                  {Object.entries(getDepartmentReport()).map(([dept, deptData]) => (
                     <div key={dept} className="p-4 border rounded-lg space-y-3">
                       <h4 className="font-medium capitalize text-sm text-gray-700">{dept}</h4>
                       <div className="space-y-1 text-xs">
-                        <p>Employees: {data.employeeCount}</p>
-                        <p>Consultants: {data.consultantCount}</p>
-                        <p>Salaries: ${data.totalSalary.toLocaleString()}</p>
-                        <p>Consultant Costs: ${data.totalConsultantCost.toLocaleString()}</p>
-                        <p>Health Care: ${Math.round(data.totalHealthCare).toLocaleString()}</p>
-                        <p>Benefits: ${Math.round(data.totalBenefits).toLocaleString()}</p>
-                        <p>Iqama: ${Math.round(data.totalIqama).toLocaleString()}</p>
-                        <p className="font-semibold border-t pt-1">Total: ${Math.round(data.totalCost).toLocaleString()}</p>
+                        <p>Employees: {deptData.employeeCount}</p>
+                        <p>Consultants: {deptData.consultantCount}</p>
+                        <p>Salaries: {formatCurrency(deptData.totalSalary)}</p>
+                        <p>Consultant Costs: {formatCurrency(deptData.totalConsultantCost)}</p>
+                        <p>Benefits: {formatCurrency(deptData.totalBenefitsCost)}</p>
+                        <p className="font-semibold border-t pt-1">Total: {formatCurrency(deptData.totalCost)}</p>
                       </div>
                       <div className="space-y-1">
-                        {data.employees.map(emp => (
+                        {deptData.employees.map(emp => (
                           <Badge key={emp.id} variant="outline" className="mr-1 mb-1 text-xs">
                             {emp.name || 'Unnamed'} {emp.isCapitalized && '(IP)'}
                           </Badge>
                         ))}
-                        {data.consultants.map(consultant => (
+                        {deptData.consultants.map(consultant => (
                           <Badge key={consultant.id} variant="secondary" className="mr-1 mb-1 text-xs">
                             {consultant.name || 'Consultant'}
                           </Badge>
@@ -1165,7 +962,6 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
         </TabsContent>
 
         <TabsContent value="admin" className="space-y-6">
-          {/* Rent & Utilities */}
           <Card className="border-l-4 border-blue-500">
             <CardHeader>
               <CardTitle className="text-lg">Office Rent & Utilities</CardTitle>
@@ -1207,7 +1003,6 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
             </CardContent>
           </Card>
 
-          {/* Travel */}
           <Card className="border-l-4 border-purple-500">
             <CardHeader>
               <CardTitle className="text-lg">Travel Expenses</CardTitle>
@@ -1265,7 +1060,6 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
             </CardContent>
           </Card>
 
-          {/* Insurance */}
           <Card className="border-l-4 border-red-500">
             <CardHeader>
               <CardTitle className="text-lg">Insurance</CardTitle>
@@ -1296,7 +1090,6 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
             </CardContent>
           </Card>
 
-          {/* Software & Subscriptions */}
           <Card className="border-l-4 border-pink-500">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Software & Subscriptions</CardTitle>
@@ -1323,9 +1116,13 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                         <SelectValue placeholder="Select Department" />
                       </SelectTrigger>
                       <SelectContent>
-                        {departmentOptions.map(dept => (
-                          <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
-                        ))}
+                        <SelectItem value="technology">Technology</SelectItem>
+                        <SelectItem value="sales">Sales</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="operations">Operations</SelectItem>
+                        <SelectItem value="finance">Finance</SelectItem>
+                        <SelectItem value="hr">Human Resources</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1384,11 +1181,10 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
             </CardContent>
           </Card>
 
-          {/* Other Admin Categories */}
-          {adminCategories.map(({ key, label, color }) => (
-            <Card key={key} className={`border-l-4 ${color}`}>
+          {['legal', 'accounting', 'other'].map((key) => (
+            <Card key={key} className={`border-l-4 ${key === 'legal' ? 'border-yellow-500' : key === 'accounting' ? 'border-indigo-500' : 'border-cyan-500'}`}>
               <CardHeader>
-                <CardTitle className="text-lg">{label}</CardTitle>
+                <CardTitle className="text-lg">{key === 'legal' ? 'Legal & Professional Services' : key === 'accounting' ? 'Accounting & Bookkeeping' : 'Other Admin Expenses'}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1397,8 +1193,8 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                     <Input
                       type="number"
                       placeholder="0"
-                      value={data.admin[key].year1 || ''}
-                      onChange={(e) => updateAdminCost(key, 'year1', Number(e.target.value))}
+                      value={data.admin[key as keyof FinancialData['costs']['admin']].year1 || ''}
+                      onChange={(e) => updateAdminCost(key as keyof FinancialData['costs']['admin'], 'year1', Number(e.target.value))}
                     />
                   </div>
                   <div>
@@ -1406,8 +1202,8 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                     <Input
                       type="number"
                       placeholder="0"
-                      value={data.admin[key].year2 || ''}
-                      onChange={(e) => updateAdminCost(key, 'year2', Number(e.target.value))}
+                      value={data.admin[key as keyof FinancialData['costs']['admin']].year2 || ''}
+                      onChange={(e) => updateAdminCost(key as keyof FinancialData['costs']['admin'], 'year2', Number(e.target.value))}
                     />
                   </div>
                   <div>
@@ -1415,8 +1211,8 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                     <Input
                       type="number"
                       placeholder="0"
-                      value={data.admin[key].year3 || ''}
-                      onChange={(e) => updateAdminCost(key, 'year3', Number(e.target.value))}
+                      value={data.admin[key as keyof FinancialData['costs']['admin']].year3 || ''}
+                      onChange={(e) => updateAdminCost(key as keyof FinancialData['costs']['admin'], 'year3', Number(e.target.value))}
                     />
                   </div>
                 </div>
@@ -1434,7 +1230,13 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
               <div className="flex items-center space-x-2">
                 <Switch
                   checked={data.marketing.isPercentageOfRevenue}
-                  onCheckedChange={updateMarketingMode}
+                  onCheckedChange={(checked) => onChange({
+                    ...data,
+                    marketing: {
+                      ...data.marketing,
+                      isPercentageOfRevenue: checked
+                    }
+                  })}
                 />
                 <Label>Use percentage of revenue</Label>
               </div>
@@ -1446,12 +1248,18 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                     type="number"
                     placeholder="10"
                     value={data.marketing.percentageOfRevenue || ''}
-                    onChange={(e) => updateMarketingPercentage(Number(e.target.value))}
+                    onChange={(e) => onChange({
+                      ...data,
+                      marketing: {
+                        ...data.marketing,
+                        percentageOfRevenue: Number(e.target.value)
+                      }
+                    })}
                   />
                   <div className="mt-2 text-sm text-gray-600">
-                    <p>Budget Year 1: ${getMarketingBudget('year1').toLocaleString()}</p>
-                    <p>Budget Year 2: ${getMarketingBudget('year2').toLocaleString()}</p>
-                    <p>Budget Year 3: ${getMarketingBudget('year3').toLocaleString()}</p>
+                    <p>Budget Year 1: ${revenueStreams.reduce((sum, stream) => sum + stream.year1, 0) * (data.marketing.percentageOfRevenue / 100)}</p>
+                    <p>Budget Year 2: ${revenueStreams.reduce((sum, stream) => sum + stream.year2, 0) * (data.marketing.percentageOfRevenue / 100)}</p>
+                    <p>Budget Year 3: ${revenueStreams.reduce((sum, stream) => sum + stream.year3, 0) * (data.marketing.percentageOfRevenue / 100)}</p>
                   </div>
                 </div>
               ) : (
@@ -1462,7 +1270,16 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                       type="number"
                       placeholder="0"
                       value={data.marketing.manualBudget.year1 || ''}
-                      onChange={(e) => updateMarketingCost('manualBudget', 'year1', Number(e.target.value))}
+                      onChange={(e) => onChange({
+                        ...data,
+                        marketing: {
+                          ...data.marketing,
+                          manualBudget: {
+                            ...data.marketing.manualBudget,
+                            year1: Number(e.target.value)
+                          }
+                        }
+                      })}
                     />
                   </div>
                   <div>
@@ -1471,7 +1288,16 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                       type="number"
                       placeholder="0"
                       value={data.marketing.manualBudget.year2 || ''}
-                      onChange={(e) => updateMarketingCost('manualBudget', 'year2', Number(e.target.value))}
+                      onChange={(e) => onChange({
+                        ...data,
+                        marketing: {
+                          ...data.marketing,
+                          manualBudget: {
+                            ...data.marketing.manualBudget,
+                            year2: Number(e.target.value)
+                          }
+                        }
+                      })}
                     />
                   </div>
                   <div>
@@ -1480,7 +1306,16 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                       type="number"
                       placeholder="0"
                       value={data.marketing.manualBudget.year3 || ''}
-                      onChange={(e) => updateMarketingCost('manualBudget', 'year3', Number(e.target.value))}
+                      onChange={(e) => onChange({
+                        ...data,
+                        marketing: {
+                          ...data.marketing,
+                          manualBudget: {
+                            ...data.marketing.manualBudget,
+                            year3: Number(e.target.value)
+                          }
+                        }
+                      })}
                     />
                   </div>
                 </div>
@@ -1488,10 +1323,10 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
             </CardContent>
           </Card>
 
-          {marketingCategories.map(({ key, label, color }) => (
-            <Card key={key} className={`border-l-4 ${color}`}>
+          {['digitalAdvertising', 'contentCreation', 'events', 'pr', 'brandingDesign', 'tools', 'other'].map((key) => (
+            <Card key={key} className={`border-l-4 ${key === 'digitalAdvertising' ? 'border-blue-500' : key === 'contentCreation' ? 'border-green-500' : key === 'events' ? 'border-purple-500' : key === 'pr' ? 'border-orange-500' : key === 'brandingDesign' ? 'border-red-500' : key === 'tools' ? 'border-yellow-500' : 'border-gray-500'}`}>
               <CardHeader>
-                <CardTitle className="text-lg">{label}</CardTitle>
+                <CardTitle className="text-lg">{key === 'digitalAdvertising' ? 'Digital Advertising' : key === 'contentCreation' ? 'Content Creation' : key === 'events' ? 'Events & Conferences' : key === 'pr' ? 'Public Relations' : key === 'brandingDesign' ? 'Branding & Design' : key === 'tools' ? 'Marketing Tools & Software' : 'Other Marketing Expenses'}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1500,8 +1335,17 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                     <Input
                       type="number"
                       placeholder="0"
-                      value={data.marketing[key].year1 || ''}
-                      onChange={(e) => updateMarketingCost(key, 'year1', Number(e.target.value))}
+                      value={data.marketing[key as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue' | 'manualBudget'>].year1 || ''}
+                      onChange={(e) => onChange({
+                        ...data,
+                        marketing: {
+                          ...data.marketing,
+                          [key]: {
+                            ...data.marketing[key as keyof typeof data.marketing],
+                            year1: Number(e.target.value)
+                          }
+                        }
+                      })}
                     />
                   </div>
                   <div>
@@ -1509,8 +1353,17 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                     <Input
                       type="number"
                       placeholder="0"
-                      value={data.marketing[key].year2 || ''}
-                      onChange={(e) => updateMarketingCost(key, 'year2', Number(e.target.value))}
+                      value={data.marketing[key as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue' | 'manualBudget'>].year2 || ''}
+                      onChange={(e) => onChange({
+                        ...data,
+                        marketing: {
+                          ...data.marketing,
+                          [key]: {
+                            ...data.marketing[key as keyof typeof data.marketing],
+                            year2: Number(e.target.value)
+                          }
+                        }
+                      })}
                     />
                   </div>
                   <div>
@@ -1518,8 +1371,17 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                     <Input
                       type="number"
                       placeholder="0"
-                      value={data.marketing[key].year3 || ''}
-                      onChange={(e) => updateMarketingCost(key, 'year3', Number(e.target.value))}
+                      value={data.marketing[key as keyof Omit<FinancialData['costs']['marketing'], 'isPercentageOfRevenue' | 'percentageOfRevenue' | 'manualBudget'>].year3 || ''}
+                      onChange={(e) => onChange({
+                        ...data,
+                        marketing: {
+                          ...data.marketing,
+                          [key]: {
+                            ...data.marketing[key as keyof typeof data.marketing],
+                            year3: Number(e.target.value)
+                          }
+                        }
+                      })}
                     />
                   </div>
                 </div>
@@ -1529,59 +1391,44 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
         </TabsContent>
       </Tabs>
 
-      {/* IP Asset Creation Dialog */}
+      {/* IP Asset Dialog */}
       <Dialog open={showIPDialog} onOpenChange={setShowIPDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Lightbulb className="w-5 h-5 text-yellow-500" />
-              Add Intangible Asset?
+              <Lightbulb className="w-5 h-5" />
+              Create Intangible Asset?
             </DialogTitle>
             <DialogDescription>
-              Technology roles often create intellectual property (IP). Would you like to add this as an intangible asset to your balance sheet?
+              We detected that you've added a technology role. Would you like to create an intangible asset 
+              representing the intellectual property this employee will develop?
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4 py-4">
+          <div className="space-y-4">
             <div>
-              <Label htmlFor="ip-name">Asset Name</Label>
+              <Label>Asset Name</Label>
               <Input
-                id="ip-name"
                 value={ipAssetName}
                 onChange={(e) => setIpAssetName(e.target.value)}
-                placeholder="e.g., Software Development IP"
+                placeholder="IP Development - Software Engineer"
               />
             </div>
-            
             <div>
-              <Label htmlFor="ip-cost">Estimated Cost ($)</Label>
+              <Label>Asset Cost ($)</Label>
               <Input
-                id="ip-cost"
                 type="number"
-                value={ipAssetCost || ''}
+                value={ipAssetCost}
                 onChange={(e) => setIpAssetCost(Number(e.target.value))}
                 placeholder="0"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Suggested: 30% of annual salary for IP development costs
-              </p>
             </div>
           </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowIPDialog(false)}>
+            <Button variant="outline" onClick={declineIPAsset}>
               Skip
             </Button>
-            <Button onClick={() => {
-              if (onAddIntangibleAsset && ipAssetCost > 0) {
-                onAddIntangibleAsset(ipAssetName, ipAssetCost);
-              }
-              setShowIPDialog(false);
-              setIpAssetName('');
-              setIpAssetCost(0);
-              setPendingEmployee(null);
-            }}>
-              Add IP Asset
+            <Button onClick={confirmIPAsset}>
+              Create Asset
             </Button>
           </DialogFooter>
         </DialogContent>
