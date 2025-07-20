@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { FinancialData } from "@/pages/Index";
-import { Plus, Trash2, BarChart3, Users, Lightbulb } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { Plus, Trash2, BarChart3, Users, Lightbulb, Edit, Check, X } from "lucide-react";
 
 interface OperationalExpensesProps {
   data: {
@@ -33,6 +34,10 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   const [ipAssetName, setIpAssetName] = useState('');
   const [ipAssetCost, setIpAssetCost] = useState(0);
   const [pendingEmployee, setPendingEmployee] = useState<any>(null);
+  const [editingEmployee, setEditingEmployee] = useState<string | null>(null);
+  const [editingConsultant, setEditingConsultant] = useState<string | null>(null);
+  const [editEmployeeValues, setEditEmployeeValues] = useState<any>({});
+  const [editConsultantValues, setEditConsultantValues] = useState<any>({});
   
   // Calculation methods for benefits
   const [calculationMethods, setCalculationMethods] = useState({
@@ -53,8 +58,8 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   const addEmployee = () => {
     const newEmployee = {
       id: Date.now().toString(),
-      name: '',
-      designation: '',
+      name: 'New Employee',
+      designation: 'Job Title',
       department: 'other' as const,
       salary: 0,
       isCapitalized: false
@@ -67,6 +72,60 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
         employees: [...data.team.employees, newEmployee]
       }
     });
+  };
+
+  const startEditEmployee = (employee: any) => {
+    setEditingEmployee(employee.id);
+    setEditEmployeeValues({
+      name: employee.name,
+      designation: employee.designation,
+      department: employee.department,
+      salary: employee.salary,
+      isCapitalized: employee.isCapitalized
+    });
+  };
+
+  const saveEditEmployee = (employeeId: string) => {
+    const updatedEmployees = data.team.employees.map(emp =>
+      emp.id === employeeId ? { ...emp, ...editEmployeeValues } : emp
+    );
+    
+    // Check if we're updating designation to a technology role
+    const updatedEmployee = updatedEmployees.find(emp => emp.id === employeeId);
+    if (updatedEmployee && isTechnologyRole(editEmployeeValues.designation) && updatedEmployee.salary > 0) {
+      setPendingEmployee(updatedEmployee);
+      setIpAssetName(`IP Development - ${editEmployeeValues.designation}`);
+      setIpAssetCost(updatedEmployee.salary * 0.3);
+      setShowIPDialog(true);
+    }
+
+    // Check if we're capitalizing an employee as IP
+    if (editEmployeeValues.isCapitalized === true && updatedEmployee) {
+      if (updatedEmployee.department === 'technology' && updatedEmployee.salary > 0) {
+        const assetName = `Inhouse Development - ${updatedEmployee.designation || 'Technology Role'}`;
+        const assetCost = updatedEmployee.salary * 0.3;
+        
+        if (onAddIntangibleAsset) {
+          onAddIntangibleAsset(assetName, assetCost);
+        }
+      }
+    }
+    
+    onChange({
+      ...data,
+      team: {
+        ...data.team,
+        employees: updatedEmployees
+      }
+    });
+    
+    setEditingEmployee(null);
+    setEditEmployeeValues({});
+  };
+
+  const cancelEditEmployee = () => {
+    setEditingEmployee(null);
+    setEditEmployeeValues({});
   };
 
   const updateEmployee = (id: string, field: string, value: any) => {
@@ -122,8 +181,8 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   const addConsultant = () => {
     const newConsultant = {
       id: Date.now().toString(),
-      name: '',
-      designation: '',
+      name: 'New Consultant',
+      designation: 'Consultant Role',
       department: 'other' as const,
       monthlyCost: 0
     };
@@ -135,6 +194,38 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
         consultants: [...data.team.consultants, newConsultant]
       }
     });
+  };
+
+  const startEditConsultant = (consultant: any) => {
+    setEditingConsultant(consultant.id);
+    setEditConsultantValues({
+      name: consultant.name,
+      designation: consultant.designation,
+      department: consultant.department,
+      monthlyCost: consultant.monthlyCost
+    });
+  };
+
+  const saveEditConsultant = (consultantId: string) => {
+    const updatedConsultants = data.team.consultants.map(cons =>
+      cons.id === consultantId ? { ...cons, ...editConsultantValues } : cons
+    );
+    
+    onChange({
+      ...data,
+      team: {
+        ...data.team,
+        consultants: updatedConsultants
+      }
+    });
+    
+    setEditingConsultant(null);
+    setEditConsultantValues({});
+  };
+
+  const cancelEditConsultant = () => {
+    setEditingConsultant(null);
+    setEditConsultantValues({});
   };
 
   const updateConsultant = (id: string, field: string, value: any) => {
@@ -484,65 +575,139 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
             </CardHeader>
             <CardContent className="space-y-4">
               {data.team.employees.map((employee) => (
-                <div key={employee.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-lg">
-                  <div>
-                    <Label className="text-xs text-gray-500">Name</Label>
-                    <Input
-                      placeholder="Employee Name"
-                      value={employee.name}
-                      onChange={(e) => updateEmployee(employee.id, 'name', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Designation</Label>
-                    <Input
-                      placeholder="Job Title"
-                      value={employee.designation}
-                      onChange={(e) => updateEmployee(employee.id, 'designation', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Department</Label>
-                    <Select value={employee.department} onValueChange={(value) => updateEmployee(employee.id, 'department', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {departmentOptions.map(dept => (
-                          <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Annual Salary ($)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={employee.salary || ''}
-                      onChange={(e) => updateEmployee(employee.id, 'salary', Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="flex flex-col justify-center">
-                    {employee.department === 'technology' && (
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={employee.isCapitalized || false}
-                          onCheckedChange={(checked) => updateEmployee(employee.id, 'isCapitalized', checked)}
-                        />
-                        <Label className="text-xs">Capitalize as IP</Label>
-                      </div>
+                <div key={employee.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <div className="flex-1 grid grid-cols-5 gap-4 items-center">
+                    {editingEmployee === employee.id ? (
+                      // Edit mode
+                      <>
+                        <div>
+                          <Label className="text-xs text-gray-500">Name</Label>
+                          <Input
+                            value={editEmployeeValues.name || ''}
+                            onChange={(e) => setEditEmployeeValues({...editEmployeeValues, name: e.target.value})}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">Designation</Label>
+                          <Input
+                            value={editEmployeeValues.designation || ''}
+                            onChange={(e) => setEditEmployeeValues({...editEmployeeValues, designation: e.target.value})}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">Department</Label>
+                          <Select 
+                            value={editEmployeeValues.department || 'other'} 
+                            onValueChange={(value) => setEditEmployeeValues({...editEmployeeValues, department: value})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {departmentOptions.map(dept => (
+                                <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">Annual Salary</Label>
+                          <Input
+                            type="number"
+                            value={editEmployeeValues.salary || 0}
+                            onChange={(e) => setEditEmployeeValues({...editEmployeeValues, salary: Number(e.target.value)})}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="flex flex-col items-center">
+                          {editEmployeeValues.department === 'technology' && (
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Switch
+                                checked={editEmployeeValues.isCapitalized || false}
+                                onCheckedChange={(checked) => setEditEmployeeValues({...editEmployeeValues, isCapitalized: checked})}
+                              />
+                              <Label className="text-xs">Capitalize as IP</Label>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      // Display mode
+                      <>
+                        <div>
+                          <div className="font-medium text-gray-700">{employee.name}</div>
+                          <div className="text-xs text-gray-500">Name</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-700">{employee.designation}</div>
+                          <div className="text-xs text-gray-500">Designation</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-700 capitalize">
+                            {departmentOptions.find(d => d.value === employee.department)?.label || employee.department}
+                          </div>
+                          <div className="text-xs text-gray-500">Department</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-700">{formatCurrency(employee.salary || 0)}</div>
+                          <div className="text-xs text-gray-500">Annual Salary</div>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          {employee.department === 'technology' && (
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                checked={employee.isCapitalized || false}
+                                onCheckedChange={(checked) => updateEmployee(employee.id, 'isCapitalized', checked)}
+                              />
+                              <Label className="text-xs">Capitalize as IP</Label>
+                            </div>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
-                  <div className="flex items-center">
-                    <Button
-                      onClick={() => removeEmployee(employee.id)}
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <div className="flex items-center gap-2 ml-4">
+                    {editingEmployee === employee.id ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => saveEditEmployee(employee.id)}
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                        >
+                          <Check className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={cancelEditEmployee}
+                          className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 border-gray-200"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => startEditEmployee(employee)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeEmployee(employee.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -566,54 +731,117 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
             </CardHeader>
             <CardContent className="space-y-4">
               {data.team.consultants.map((consultant) => (
-                <div key={consultant.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border rounded-lg">
-                  <div>
-                    <Label className="text-xs text-gray-500">Name</Label>
-                    <Input
-                      placeholder="Consultant Name"
-                      value={consultant.name}
-                      onChange={(e) => updateConsultant(consultant.id, 'name', e.target.value)}
-                    />
+                <div key={consultant.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <div className="flex-1 grid grid-cols-4 gap-4 items-center">
+                    {editingConsultant === consultant.id ? (
+                      // Edit mode
+                      <>
+                        <div>
+                          <Label className="text-xs text-gray-500">Name</Label>
+                          <Input
+                            value={editConsultantValues.name || ''}
+                            onChange={(e) => setEditConsultantValues({...editConsultantValues, name: e.target.value})}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">Designation</Label>
+                          <Input
+                            value={editConsultantValues.designation || ''}
+                            onChange={(e) => setEditConsultantValues({...editConsultantValues, designation: e.target.value})}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">Department</Label>
+                          <Select 
+                            value={editConsultantValues.department || 'other'} 
+                            onValueChange={(value) => setEditConsultantValues({...editConsultantValues, department: value})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {departmentOptions.map(dept => (
+                                <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">Monthly Cost</Label>
+                          <Input
+                            type="number"
+                            value={editConsultantValues.monthlyCost || 0}
+                            onChange={(e) => setEditConsultantValues({...editConsultantValues, monthlyCost: Number(e.target.value)})}
+                            className="text-sm"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      // Display mode
+                      <>
+                        <div>
+                          <div className="font-medium text-gray-700">{consultant.name}</div>
+                          <div className="text-xs text-gray-500">Name</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-700">{consultant.designation}</div>
+                          <div className="text-xs text-gray-500">Designation</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-700 capitalize">
+                            {departmentOptions.find(d => d.value === consultant.department)?.label || consultant.department}
+                          </div>
+                          <div className="text-xs text-gray-500">Department</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-700">{formatCurrency(consultant.monthlyCost || 0)}</div>
+                          <div className="text-xs text-gray-500">Monthly Cost</div>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Designation</Label>
-                    <Input
-                      placeholder="Role/Specialty"
-                      value={consultant.designation}
-                      onChange={(e) => updateConsultant(consultant.id, 'designation', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Department</Label>
-                    <Select value={consultant.department} onValueChange={(value) => updateConsultant(consultant.id, 'department', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {departmentOptions.map(dept => (
-                          <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Monthly Cost ($)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={consultant.monthlyCost || ''}
-                      onChange={(e) => updateConsultant(consultant.id, 'monthlyCost', Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="flex items-center">
-                    <Button
-                      onClick={() => removeConsultant(consultant.id)}
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <div className="flex items-center gap-2 ml-4">
+                    {editingConsultant === consultant.id ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => saveEditConsultant(consultant.id)}
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                        >
+                          <Check className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={cancelEditConsultant}
+                          className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 border-gray-200"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => startEditConsultant(consultant)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeConsultant(consultant.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
