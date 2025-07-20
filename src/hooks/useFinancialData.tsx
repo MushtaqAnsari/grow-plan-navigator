@@ -228,6 +228,12 @@ export const useFinancialData = (userId: string | undefined) => {
         supabase.from('operational_expenses_consultants').select('*').eq('financial_model_id', modelId)
       ]);
 
+      // Load direct costs separately
+      const { data: directCostsData, error: directCostsError } = await supabase
+        .from('direct_costs')
+        .select('*')
+        .eq('financial_model_id', modelId);
+
       setLoadingState('processing_data');
 
       const defaultData = createDefaultFinancialData();
@@ -369,6 +375,33 @@ export const useFinancialData = (userId: string | undefined) => {
           department: consultant.department as any,
           monthlyCost: consultant.monthly_cost || 0
         }));
+      }
+
+      // Process direct costs data
+      if (directCostsData && directCostsData.length > 0) {
+        const revenueStreamCosts: FinancialData['costs']['revenueStreamCosts'] = {};
+        
+        directCostsData.forEach((cost: any) => {
+          if (!revenueStreamCosts[cost.revenue_stream_name]) {
+            revenueStreamCosts[cost.revenue_stream_name] = {
+              directCosts: {
+                cogs: { year1: 0, year2: 0, year3: 0 },
+                processing: { year1: 0, year2: 0, year3: 0 },
+                fulfillment: { year1: 0, year2: 0, year3: 0 }
+              }
+            };
+          }
+          
+          const costKey = cost.cost_name || cost.cost_type;
+          revenueStreamCosts[cost.revenue_stream_name].directCosts[costKey] = {
+            year1: cost.year1 || 0,
+            year2: cost.year2 || 0,
+            year3: cost.year3 || 0
+          };
+        });
+        
+        defaultData.costs.revenueStreamCosts = revenueStreamCosts;
+        console.log('💼 Financial Data: Loaded direct costs:', revenueStreamCosts);
       }
 
       setFinancialData(defaultData);
