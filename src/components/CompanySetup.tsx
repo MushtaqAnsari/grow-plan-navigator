@@ -75,6 +75,7 @@ const CompanySetup: React.FC<CompanySetupProps> = ({ onSetupComplete }) => {
     website: '',
     currency: 'USD',
     language: 'en',
+    planningPeriod: 3, // Default to 3 years
     // Founder Information
     founderName: '',
     founderEmail: '',
@@ -201,6 +202,31 @@ const CompanySetup: React.FC<CompanySetupProps> = ({ onSetupComplete }) => {
                     </Select>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">Planning Period</Label>
+                    <Select value={formData.planningPeriod.toString()} onValueChange={(value) => handleInputChange('planningPeriod', parseInt(value))}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">2 Years</SelectItem>
+                        <SelectItem value="3">3 Years</SelectItem>
+                        <SelectItem value="4">4 Years</SelectItem>
+                        <SelectItem value="5">5 Years</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-6 border border-slate-200/50 shadow-sm">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                  <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
+                    <User className="w-3 h-3 text-green-600" />
+                  </div>
+                  Role Assignment
+                </h3>
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700">Founder is Operator</Label>
                     <div className="flex items-center space-x-2 h-10">

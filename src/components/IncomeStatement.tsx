@@ -130,6 +130,7 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ data, onUpdateData, f
                 data={data.costs}
                 revenueStreams={data.revenueStreams}
                 balanceSheetData={data.costs.balanceSheet}
+                planningPeriod={data.companyData?.planningPeriod || 3}
                 onChange={(costsData) => updateFinancialData('costs', {
                   ...data.costs,
                   team: costsData.team,

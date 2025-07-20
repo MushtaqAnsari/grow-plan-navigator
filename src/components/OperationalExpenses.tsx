@@ -18,6 +18,7 @@ interface OperationalExpensesProps {
     admin: FinancialData['costs']['admin'];
     marketing: FinancialData['costs']['marketing'];
   };
+  planningPeriod?: number;
   onChange: (data: {
     team: FinancialData['costs']['team'];
     admin: FinancialData['costs']['admin'];
@@ -28,7 +29,7 @@ interface OperationalExpensesProps {
   onAddIntangibleAsset?: (assetName: string, cost: number) => void;
 }
 
-const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChange, revenueStreams, balanceSheetData, onAddIntangibleAsset }) => {
+const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChange, revenueStreams, balanceSheetData, onAddIntangibleAsset, planningPeriod }) => {
   const [showDepartmentReport, setShowDepartmentReport] = useState(false);
   const [showIPDialog, setShowIPDialog] = useState(false);
   const [ipAssetName, setIpAssetName] = useState('');
@@ -52,7 +53,10 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   const [newBenefitName, setNewBenefitName] = useState('');
   const [newBenefitType, setNewBenefitType] = useState<'fixed' | 'percentage'>('fixed');
   
-  // Salary increase management
+  // Get planning period from props (default to 3 years if not set)
+  const effectivePlanningPeriod = planningPeriod || 3;
+  
+  // Salary increase management - only show years up to planning period
   const [salaryIncreaseSettings, setSalaryIncreaseSettings] = useState({
     year2: 0,
     year3: 0,
@@ -674,51 +678,59 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
               <CardTitle className="text-lg">Annual Salary Increase Settings</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <Label>Year 2 Increase (%)</Label>
-                  <Input
-                    type="number"
-                    value={salaryIncreaseSettings.year2}
-                    onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year2: Number(e.target.value)})}
-                    placeholder="0"
-                    min="0"
-                    max="100"
-                  />
-                </div>
-                <div>
-                  <Label>Year 3 Increase (%)</Label>
-                  <Input
-                    type="number"
-                    value={salaryIncreaseSettings.year3}
-                    onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year3: Number(e.target.value)})}
-                    placeholder="0"
-                    min="0"
-                    max="100"
-                  />
-                </div>
-                <div>
-                  <Label>Year 4 Increase (%)</Label>
-                  <Input
-                    type="number"
-                    value={salaryIncreaseSettings.year4}
-                    onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year4: Number(e.target.value)})}
-                    placeholder="0"
-                    min="0"
-                    max="100"
-                  />
-                </div>
-                <div>
-                  <Label>Year 5 Increase (%)</Label>
-                  <Input
-                    type="number"
-                    value={salaryIncreaseSettings.year5}
-                    onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year5: Number(e.target.value)})}
-                    placeholder="0"
-                    min="0"
-                    max="100"
-                  />
-                </div>
+              <div className={`grid grid-cols-1 gap-4 ${effectivePlanningPeriod >= 3 ? 'md:grid-cols-2' : ''} ${effectivePlanningPeriod >= 4 ? 'lg:grid-cols-3' : ''} ${effectivePlanningPeriod === 5 ? 'xl:grid-cols-4' : ''}`}>
+                {effectivePlanningPeriod >= 2 && (
+                  <div>
+                    <Label>Year 2 Increase (%)</Label>
+                    <Input
+                      type="number"
+                      value={salaryIncreaseSettings.year2}
+                      onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year2: Number(e.target.value)})}
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                )}
+                {effectivePlanningPeriod >= 3 && (
+                  <div>
+                    <Label>Year 3 Increase (%)</Label>
+                    <Input
+                      type="number"
+                      value={salaryIncreaseSettings.year3}
+                      onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year3: Number(e.target.value)})}
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                )}
+                {effectivePlanningPeriod >= 4 && (
+                  <div>
+                    <Label>Year 4 Increase (%)</Label>
+                    <Input
+                      type="number"
+                      value={salaryIncreaseSettings.year4}
+                      onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year4: Number(e.target.value)})}
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                )}
+                {effectivePlanningPeriod === 5 && (
+                  <div>
+                    <Label>Year 5 Increase (%)</Label>
+                    <Input
+                      type="number"
+                      value={salaryIncreaseSettings.year5}
+                      onChange={(e) => setSalaryIncreaseSettings({...salaryIncreaseSettings, year5: Number(e.target.value)})}
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mt-2">
                 These percentages will be applied to all employee salaries for each respective year.

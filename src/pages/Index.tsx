@@ -21,6 +21,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { createCyberLabsDemoData, createCyberLabsCompanyData } from "@/utils/demoData";
 
 export interface FinancialData {
+  companyData?: {
+    companyName: string;
+    industry: string;
+    currency: string;
+    language: string;
+    planningPeriod: number;
+  };
   revenueStreams: {
     name: string;
     type: 'saas' | 'ecommerce' | 'advertising' | 'one-time' | 'consulting' | 'commission' | 'freemium';
@@ -572,6 +579,15 @@ const Index = () => {
               <CompanySetup onSetupComplete={(data) => {
                 setCompanyData(data);
                 setIndustry(data.industry);
+                
+                // Save company data with planning period to financial data
+                updateFinancialData('companyData', {
+                  companyName: data.companyName,
+                  industry: data.industry,
+                  currency: data.currency,
+                  language: data.language,
+                  planningPeriod: data.planningPeriod || 3
+                });
                 
                 if (data.companyName === "CyberLabs") {
                   const demoData = createCyberLabsDemoData();
