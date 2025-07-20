@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Save, Trash2 } from 'lucide-react';
+import { Plus, Save, Trash2, Percent } from 'lucide-react';
 import { FinancialData } from "@/pages/Index";
 import { formatCurrency } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,11 @@ interface DirectCost {
   year3: number;
 }
 
+interface PaymentProcessingSettings {
+  enabled: boolean;
+  percentage: number;
+}
+
 interface DirectCostsProps {
   data: FinancialData['costs']['revenueStreamCosts'];
   onChange: (data: FinancialData['costs']['revenueStreamCosts']) => void;
@@ -38,12 +43,13 @@ interface DirectCostsProps {
 
 const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStreams, financialModelId, userId }) => {
   const [showAddCustom, setShowAddCustom] = useState(false);
+  const [selectedStream, setSelectedStream] = useState('');
   const [newCostName, setNewCostName] = useState('');
-  const [newCostType, setNewCostType] = useState<'cogs' | 'processing' | 'fulfillment'>('cogs');
   const [localData, setLocalData] = useState(data);
   const [hasChanges, setHasChanges] = useState(false);
   const [directCosts, setDirectCosts] = useState<DirectCost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [paymentProcessing, setPaymentProcessing] = useState<PaymentProcessingSettings>({ enabled: true, percentage: 2.5 });
   const { toast } = useToast();
 
   // Load direct costs from database
@@ -57,9 +63,9 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
     setHasChanges(false);
   }, [data]);
 
-  const updateRevenueStreamCost = (
+  const updateCustomCost = (
     streamName: string, 
-    costType: 'cogs' | 'processing' | 'fulfillment', 
+    costName: string,
     year: 'year1' | 'year2' | 'year3', 
     value: number
   ) => {
@@ -73,37 +79,38 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
         }
       };
     }
-    updatedData[streamName].directCosts[costType][year] = value;
+    
+    if (!updatedData[streamName].directCosts[costName]) {
+      updatedData[streamName].directCosts[costName] = { year1: 0, year2: 0, year3: 0 };
+    }
+    
+    updatedData[streamName].directCosts[costName][year] = value;
     setLocalData(updatedData);
     setHasChanges(true);
   };
 
   const addCustomDirectCost = () => {
-    if (!newCostName.trim()) return;
+    if (!newCostName.trim() || !selectedStream) return;
     
     const updatedData = { ...localData };
     const costKey = newCostName.toLowerCase().replace(/\s+/g, '_');
     
-    // Add the custom cost to all existing revenue streams
-    revenueStreams.forEach(stream => {
-      if (!updatedData[stream.name]) {
-        updatedData[stream.name] = {
-          directCosts: {
-            cogs: { year1: 0, year2: 0, year3: 0 },
-            processing: { year1: 0, year2: 0, year3: 0 },
-            fulfillment: { year1: 0, year2: 0, year3: 0 }
-          }
-        };
-      }
-      
-      if (!updatedData[stream.name].directCosts[costKey]) {
-        updatedData[stream.name].directCosts[costKey] = { year1: 0, year2: 0, year3: 0 };
-      }
-    });
+    if (!updatedData[selectedStream]) {
+      updatedData[selectedStream] = {
+        directCosts: {
+          cogs: { year1: 0, year2: 0, year3: 0 },
+          processing: { year1: 0, year2: 0, year3: 0 },
+          fulfillment: { year1: 0, year2: 0, year3: 0 }
+        }
+      };
+    }
+    
+    updatedData[selectedStream].directCosts[costKey] = { year1: 0, year2: 0, year3: 0 };
     
     setLocalData(updatedData);
     setHasChanges(true);
     setNewCostName('');
+    setSelectedStream('');
     setShowAddCustom(false);
   };
 
@@ -135,16 +142,33 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
       // Convert localData to DirectCost format for saving
       const costsToSave: DirectCost[] = [];
       
+      // Add payment processing costs
+      if (paymentProcessing.enabled) {
+        revenueStreams.forEach(stream => {
+          costsToSave.push({
+            revenue_stream_name: stream.name,
+            cost_type: 'payment_processing',
+            cost_name: 'Payment Processing Fees',
+            year1: (stream.year1 * paymentProcessing.percentage) / 100,
+            year2: (stream.year2 * paymentProcessing.percentage) / 100,
+            year3: (stream.year3 * paymentProcessing.percentage) / 100,
+          });
+        });
+      }
+      
+      // Add custom costs
       Object.entries(localData).forEach(([streamName, streamData]) => {
         Object.entries(streamData.directCosts).forEach(([costType, costData]) => {
-          costsToSave.push({
-            revenue_stream_name: streamName,
-            cost_type: costType,
-            cost_name: ['cogs', 'processing', 'fulfillment'].includes(costType) ? null : costType,
-            year1: costData.year1 || 0,
-            year2: costData.year2 || 0,
-            year3: costData.year3 || 0,
-          });
+          if (!['cogs', 'processing', 'fulfillment'].includes(costType)) {
+            costsToSave.push({
+              revenue_stream_name: streamName,
+              cost_type: 'custom',
+              cost_name: costType.replace(/_/g, ' '),
+              year1: costData.year1 || 0,
+              year2: costData.year2 || 0,
+              year3: costData.year3 || 0,
+            });
+          }
         });
       });
 
@@ -212,47 +236,41 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
     }
   };
 
-  const getDirectCostTypes = (streamType: string) => {
-    switch (streamType) {
-      case 'saas':
-        return [
-          { key: 'cogs' as const, label: 'Server/Infrastructure Costs', placeholder: 'Hosting, CDN, etc.' },
-          { key: 'processing' as const, label: 'Payment Processing (2-3%)', placeholder: '% of revenue' },
-          { key: 'fulfillment' as const, label: 'Onboarding/Setup', placeholder: 'Implementation costs' }
-        ];
-      case 'ecommerce':
-        return [
-          { key: 'cogs' as const, label: 'Cost of Goods Sold', placeholder: 'Product costs' },
-          { key: 'fulfillment' as const, label: 'Shipping & Fulfillment', placeholder: 'Logistics costs' },
-          { key: 'processing' as const, label: 'Payment Processing', placeholder: '% of revenue' }
-        ];
-      case 'advertising':
-        return [
-          { key: 'cogs' as const, label: 'Content Creation', placeholder: 'Ad content costs' },
-          { key: 'processing' as const, label: 'Platform Fees', placeholder: 'Ad platform fees' },
-          { key: 'fulfillment' as const, label: 'Campaign Management', placeholder: 'Management costs' }
-        ];
-      default:
-        return [
-          { key: 'cogs' as const, label: 'Cost of Goods/Services', placeholder: 'Direct costs' },
-          { key: 'processing' as const, label: 'Processing Fees', placeholder: 'Transaction fees' },
-          { key: 'fulfillment' as const, label: 'Fulfillment Costs', placeholder: 'Delivery costs' }
-        ];
-    }
+  const calculatePaymentProcessingCosts = () => {
+    if (!paymentProcessing.enabled) return { year1: 0, year2: 0, year3: 0 };
+    
+    return {
+      year1: revenueStreams.reduce((sum, stream) => sum + (stream.year1 * paymentProcessing.percentage) / 100, 0),
+      year2: revenueStreams.reduce((sum, stream) => sum + (stream.year2 * paymentProcessing.percentage) / 100, 0),
+      year3: revenueStreams.reduce((sum, stream) => sum + (stream.year3 * paymentProcessing.percentage) / 100, 0),
+    };
   };
 
-  const calculateTotalDirectCosts = () => {
+  const calculateCustomCosts = () => {
     const totals = { year1: 0, year2: 0, year3: 0 };
     
     Object.values(localData).forEach(streamData => {
-      Object.values(streamData.directCosts).forEach(costData => {
-        totals.year1 += costData.year1 || 0;
-        totals.year2 += costData.year2 || 0;
-        totals.year3 += costData.year3 || 0;
+      Object.entries(streamData.directCosts).forEach(([costType, costData]) => {
+        if (!['cogs', 'processing', 'fulfillment'].includes(costType)) {
+          totals.year1 += costData.year1 || 0;
+          totals.year2 += costData.year2 || 0;
+          totals.year3 += costData.year3 || 0;
+        }
       });
     });
     
     return totals;
+  };
+
+  const calculateTotalDirectCosts = () => {
+    const paymentCosts = calculatePaymentProcessingCosts();
+    const customCosts = calculateCustomCosts();
+    
+    return {
+      year1: paymentCosts.year1 + customCosts.year1,
+      year2: paymentCosts.year2 + customCosts.year2,
+      year3: paymentCosts.year3 + customCosts.year3,
+    };
   };
 
   return (
@@ -269,71 +287,6 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
         </Button>
       </div>
 
-      {/* Add Custom Direct Cost Button */}
-      {revenueStreams.length > 0 && (
-        <Card className="border-dashed border-2 border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              Add Custom Direct Cost Category
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!showAddCustom ? (
-              <Button 
-                onClick={() => setShowAddCustom(true)}
-                variant="outline" 
-                className="w-full"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Direct Cost Category
-              </Button>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Cost Category Name</Label>
-                    <Input
-                      placeholder="e.g., Raw Materials, Licensing Fees"
-                      value={newCostName}
-                      onChange={(e) => setNewCostName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Cost Type</Label>
-                    <Select value={newCostType} onValueChange={(value: 'cogs' | 'processing' | 'fulfillment') => setNewCostType(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select cost type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cogs">Cost of Goods/Services</SelectItem>
-                        <SelectItem value="processing">Processing Fees</SelectItem>
-                        <SelectItem value="fulfillment">Fulfillment Costs</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={addCustomDirectCost} className="flex-1">
-                    Add Cost Category
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setShowAddCustom(false);
-                      setNewCostName('');
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Existing Revenue Stream Costs */}
       {revenueStreams.length === 0 ? (
         <Card className="border-orange-200 bg-orange-50">
           <CardContent className="p-6 text-center">
@@ -349,202 +302,241 @@ const DirectCosts: React.FC<DirectCostsProps> = ({ data, onChange, revenueStream
           </CardContent>
         </Card>
       ) : (
-        revenueStreams.map((stream) => (
-          <Card key={stream.name} className="border-l-4 border-l-green-500">
+        <>
+          {/* Global Payment Processing Settings */}
+          <Card className="border-blue-200 bg-blue-50">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center justify-between">
-                <span>Direct Costs for: {stream.name}</span>
-                <span className="text-sm font-normal text-gray-500 capitalize">
-                  {stream.type} Revenue Stream
-                </span>
+              <CardTitle className="text-blue-800 flex items-center gap-2">
+                <Percent className="w-5 h-5" />
+                Payment Processing Fees (Global)
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Standard cost types */}
-              {getDirectCostTypes(stream.type).map((costType) => (
-                <div key={costType.key} className="space-y-3">
-                  <h5 className="font-medium text-sm text-slate-600">{costType.label}</h5>
-                  <div className="grid grid-cols-3 gap-4">
-                    {['year1', 'year2', 'year3'].map(year => (
-                      <div key={year}>
-                        <Label className="text-xs text-slate-500">{year.replace('year', 'Year ')} ($)</Label>
-                        <Input
-                          type="number"
-                          placeholder={costType.placeholder}
-                          value={localData[stream.name]?.directCosts?.[costType.key]?.[year] || ''}
-                          onChange={(e) => updateRevenueStreamCost(
-                            stream.name, 
-                            costType.key, 
-                            year as 'year1' | 'year2' | 'year3', 
-                            parseFloat(e.target.value) || 0
-                          )}
-                          className="border-slate-200"
-                        />
-                      </div>
-                    ))}
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={paymentProcessing.enabled}
+                    onChange={(e) => {
+                      setPaymentProcessing({ ...paymentProcessing, enabled: e.target.checked });
+                      setHasChanges(true);
+                    }}
+                    className="rounded"
+                  />
+                  Enable payment processing fees
+                </Label>
+              </div>
+              
+              {paymentProcessing.enabled && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Processing Fee Percentage</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="10"
+                        value={paymentProcessing.percentage}
+                        onChange={(e) => {
+                          setPaymentProcessing({ ...paymentProcessing, percentage: parseFloat(e.target.value) || 0 });
+                          setHasChanges(true);
+                        }}
+                        className="pr-8"
+                      />
+                      <Percent className="w-4 h-4 absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">Applied to all revenue streams</p>
+                  </div>
+                  <div className="bg-white p-4 rounded border border-blue-200">
+                    <h4 className="font-medium text-sm mb-2">Estimated Processing Costs</h4>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      {['year1', 'year2', 'year3'].map((year, index) => {
+                        const costs = calculatePaymentProcessingCosts();
+                        return (
+                          <div key={year} className="text-center">
+                            <div className="font-medium">{formatCurrency(costs[year as keyof typeof costs])}</div>
+                            <div className="text-xs text-gray-500">Year {index + 1}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              ))}
+              )}
+            </CardContent>
+          </Card>
 
-              {/* Custom cost types */}
-              {localData[stream.name] && (
-                Object.keys(localData[stream.name]?.directCosts || {}).map(costKey => {
-                  if (['cogs', 'processing', 'fulfillment'].includes(costKey)) return null;
+          {/* Custom Direct Costs */}
+          <Card className="border-green-200">
+            <CardHeader>
+              <CardTitle className="text-green-800 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Custom Direct Costs by Revenue Stream
+                </span>
+                <Button 
+                  onClick={() => setShowAddCustom(true)}
+                  variant="outline" 
+                  size="sm"
+                  className="border-green-300 text-green-700 hover:bg-green-50"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Cost
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {showAddCustom && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <Label>Revenue Stream</Label>
+                      <Select value={selectedStream} onValueChange={setSelectedStream}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select revenue stream" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {revenueStreams.map(stream => (
+                            <SelectItem key={stream.name} value={stream.name}>
+                              {stream.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Cost Name</Label>
+                      <Input
+                        placeholder="e.g., Raw Materials, Licensing Fees"
+                        value={newCostName}
+                        onChange={(e) => setNewCostName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={addCustomDirectCost} size="sm">
+                      Add Cost
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setShowAddCustom(false);
+                        setNewCostName('');
+                        setSelectedStream('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Compact view of custom costs */}
+              <div className="space-y-4">
+                {revenueStreams.map(stream => {
+                  const streamCosts = localData[stream.name]?.directCosts || {};
+                  const customCosts = Object.entries(streamCosts).filter(([key]) => !['cogs', 'processing', 'fulfillment'].includes(key));
+                  
+                  if (customCosts.length === 0) return null;
                   
                   return (
-                    <div key={costKey} className="space-y-3">
-                      <h5 className="font-medium text-sm text-slate-600 capitalize">
-                        {costKey.replace(/_/g, ' ')}
-                      </h5>
-                      <div className="grid grid-cols-3 gap-4">
-                        {['year1', 'year2', 'year3'].map(year => (
-                          <div key={year}>
-                            <Label className="text-xs text-slate-500">{year.replace('year', 'Year ')} ($)</Label>
-                            <Input
-                              type="number"
-                              value={localData[stream.name]?.directCosts?.[costKey]?.[year] || ''}
-                              onChange={(e) => {
-                                const updatedData = { ...localData };
-                                if (!updatedData[stream.name]?.directCosts?.[costKey]) return;
-                                updatedData[stream.name].directCosts[costKey][year] = parseFloat(e.target.value) || 0;
-                                setLocalData(updatedData);
-                                setHasChanges(true);
-                              }}
-                              className="border-slate-200"
-                            />
+                    <div key={stream.name} className="border border-gray-200 rounded-lg p-4">
+                      <h3 className="font-medium text-gray-800 mb-3">{stream.name}</h3>
+                      <div className="space-y-3">
+                        {customCosts.map(([costKey, costData]) => (
+                          <div key={costKey} className="grid grid-cols-4 gap-4 items-center bg-gray-50 p-3 rounded">
+                            <div className="font-medium text-sm capitalize">
+                              {costKey.replace(/_/g, ' ')}
+                            </div>
+                            {['year1', 'year2', 'year3'].map(year => (
+                              <div key={year}>
+                                <Input
+                                  type="number"
+                                  placeholder="0"
+                                  value={costData[year] || ''}
+                                  onChange={(e) => updateCustomCost(
+                                    stream.name, 
+                                    costKey,
+                                    year as 'year1' | 'year2' | 'year3', 
+                                    parseFloat(e.target.value) || 0
+                                  )}
+                                  className="text-sm"
+                                />
+                                <div className="text-xs text-gray-500 mt-1">Year {year.slice(-1)}</div>
+                              </div>
+                            ))}
                           </div>
                         ))}
                       </div>
                     </div>
                   );
-                })
-              )}
+                })}
+              </div>
             </CardContent>
           </Card>
-        ))
-      )}
 
-      {/* Saved Direct Costs from Database */}
-      {directCosts.length > 0 && (
-        <Card className="bg-green-50 border-green-200">
-          <CardHeader>
-            <CardTitle className="text-green-800 flex items-center gap-2">
-              Saved Direct Costs
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {Object.entries(
-                directCosts.reduce((grouped, cost) => {
-                  if (!grouped[cost.revenue_stream_name]) {
-                    grouped[cost.revenue_stream_name] = [];
-                  }
-                  grouped[cost.revenue_stream_name].push(cost);
-                  return grouped;
-                }, {} as Record<string, DirectCost[]>)
-              ).map(([streamName, costs]) => (
-                <div key={streamName} className="border border-green-200 rounded-lg p-4 bg-white">
-                  <h3 className="font-semibold text-lg text-gray-800 mb-4 border-b border-green-100 pb-2">
-                    {streamName}
-                  </h3>
-                  <div className="space-y-3">
-                    {costs.map((cost) => (
-                      <div key={cost.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md border border-gray-200">
-                        <div className="flex-1 grid grid-cols-4 gap-4 items-center">
-                          <div>
-                            <div className="font-medium text-gray-700 capitalize">
-                              {cost.cost_name || cost.cost_type.replace('_', ' ')}
-                            </div>
-                            <div className="text-xs text-gray-500">Cost Type</div>
+          {/* Summary */}
+          <Card className="bg-slate-50 border-slate-200">
+            <CardHeader>
+              <CardTitle className="text-slate-800">Direct Costs Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Payment Processing */}
+                {paymentProcessing.enabled && (
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                    <span className="font-medium">Payment Processing ({paymentProcessing.percentage}%)</span>
+                    <div className="flex gap-6 text-sm">
+                      {['year1', 'year2', 'year3'].map((year, index) => {
+                        const costs = calculatePaymentProcessingCosts();
+                        return (
+                          <div key={year} className="text-center">
+                            <div className="font-medium">{formatCurrency(costs[year as keyof typeof costs])}</div>
+                            <div className="text-xs text-gray-500">Y{index + 1}</div>
                           </div>
-                          <div className="text-center">
-                            <div className="text-sm font-medium text-gray-800">{formatCurrency(cost.year1)}</div>
-                            <div className="text-xs text-gray-500">Year 1</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-sm font-medium text-gray-800">{formatCurrency(cost.year2)}</div>
-                            <div className="text-xs text-gray-500">Year 2</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-sm font-medium text-gray-800">{formatCurrency(cost.year3)}</div>
-                            <div className="text-xs text-gray-500">Year 3</div>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => cost.id && deleteCost(cost.id)}
-                          className="ml-4 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Subtotal for this revenue stream */}
-                  <div className="mt-4 pt-3 border-t border-green-200">
-                    <div className="flex items-center justify-between text-sm font-medium text-green-700">
-                      <span>Subtotal for {streamName}:</span>
-                      <div className="flex gap-6">
-                        <span>{formatCurrency(costs.reduce((sum, cost) => sum + cost.year1, 0))}</span>
-                        <span>{formatCurrency(costs.reduce((sum, cost) => sum + cost.year2, 0))}</span>
-                        <span>{formatCurrency(costs.reduce((sum, cost) => sum + cost.year3, 0))}</span>
-                      </div>
+                        );
+                      })}
                     </div>
+                  </div>
+                )}
+                
+                {/* Custom Costs */}
+                <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                  <span className="font-medium">Custom Direct Costs</span>
+                  <div className="flex gap-6 text-sm">
+                    {['year1', 'year2', 'year3'].map((year, index) => {
+                      const costs = calculateCustomCosts();
+                      return (
+                        <div key={year} className="text-center">
+                          <div className="font-medium">{formatCurrency(costs[year as keyof typeof costs])}</div>
+                          <div className="text-xs text-gray-500">Y{index + 1}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-              
-              {/* Grand Total */}
-              <div className="bg-green-100 border border-green-300 rounded-lg p-4">
-                <div className="flex items-center justify-between font-semibold text-green-800">
-                  <span className="text-lg">Total Direct Costs:</span>
-                  <div className="flex gap-8 text-lg">
-                    <div className="text-center">
-                      <div>{formatCurrency(directCosts.reduce((sum, cost) => sum + cost.year1, 0))}</div>
-                      <div className="text-xs font-normal">Year 1</div>
-                    </div>
-                    <div className="text-center">
-                      <div>{formatCurrency(directCosts.reduce((sum, cost) => sum + cost.year2, 0))}</div>
-                      <div className="text-xs font-normal">Year 2</div>
-                    </div>
-                    <div className="text-center">
-                      <div>{formatCurrency(directCosts.reduce((sum, cost) => sum + cost.year3, 0))}</div>
-                      <div className="text-xs font-normal">Year 3</div>
-                    </div>
+                
+                {/* Total */}
+                <div className="flex justify-between items-center py-3 bg-blue-50 px-4 rounded border-l-4 border-l-blue-400">
+                  <span className="font-bold text-blue-800">Total Direct Costs</span>
+                  <div className="flex gap-6">
+                    {['year1', 'year2', 'year3'].map((year, index) => {
+                      const totals = calculateTotalDirectCosts();
+                      return (
+                        <div key={year} className="text-center">
+                          <div className="font-bold text-blue-800">{formatCurrency(totals[year as keyof typeof totals])}</div>
+                          <div className="text-xs text-blue-600">Year {index + 1}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Summary */}
-      {revenueStreams.length > 0 && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-blue-800 flex items-center gap-2">
-              Total Direct Costs Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-6">
-              {['year1', 'year2', 'year3'].map((year, index) => {
-                const totals = calculateTotalDirectCosts();
-                return (
-                  <div key={year} className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {formatCurrency(totals[year as keyof typeof totals])}
-                    </div>
-                    <div className="text-sm text-blue-700">Year {index + 1}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );
