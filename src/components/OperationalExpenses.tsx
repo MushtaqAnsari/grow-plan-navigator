@@ -33,6 +33,13 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   const [ipAssetName, setIpAssetName] = useState('');
   const [ipAssetCost, setIpAssetCost] = useState(0);
   const [pendingEmployee, setPendingEmployee] = useState<any>(null);
+  
+  // Calculation methods for benefits
+  const [calculationMethods, setCalculationMethods] = useState({
+    healthCare: 'fixed' as 'fixed' | 'percentage',
+    benefits: 'fixed' as 'fixed' | 'percentage',
+    iqama: 'fixed' as 'fixed' | 'percentage'
+  });
 
   // Check if designation is technology-related
   const isTechnologyRole = (designation: string) => {
@@ -629,23 +636,50 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Fixed Amount (Monthly per employee)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={data.team.healthCare.amount || ''}
-                    onChange={(e) => updateTeamLineItem('healthCare', 'amount', Number(e.target.value))}
-                  />
+                  <Label>Calculation Method</Label>
+                  <Select 
+                    value={calculationMethods.healthCare} 
+                    onValueChange={(value: 'fixed' | 'percentage') => {
+                      setCalculationMethods({...calculationMethods, healthCare: value});
+                      // Reset the other value when switching methods
+                      if (value === 'fixed') {
+                        updateTeamLineItem('healthCare', 'percentage', 0);
+                      } else {
+                        updateTeamLineItem('healthCare', 'amount', 0);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select calculation method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixed Amount (Monthly per employee)</SelectItem>
+                      <SelectItem value="percentage">Percentage of Salary</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <Label>Percentage of Salary (%)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={data.team.healthCare.percentage || ''}
-                    onChange={(e) => updateTeamLineItem('healthCare', 'percentage', Number(e.target.value))}
-                  />
-                </div>
+                
+                {calculationMethods.healthCare === 'fixed' ? (
+                  <div>
+                    <Label>Fixed Amount (Monthly per employee)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={data.team.healthCare.amount || ''}
+                      onChange={(e) => updateTeamLineItem('healthCare', 'amount', Number(e.target.value))}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Label>Percentage of Salary (%)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={data.team.healthCare.percentage || ''}
+                      onChange={(e) => updateTeamLineItem('healthCare', 'percentage', Number(e.target.value))}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -657,23 +691,50 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Fixed Amount (Monthly per employee)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={data.team.benefits.amount || ''}
-                    onChange={(e) => updateTeamLineItem('benefits', 'amount', Number(e.target.value))}
-                  />
+                  <Label>Calculation Method</Label>
+                  <Select 
+                    value={calculationMethods.benefits} 
+                    onValueChange={(value: 'fixed' | 'percentage') => {
+                      setCalculationMethods({...calculationMethods, benefits: value});
+                      // Reset the other value when switching methods
+                      if (value === 'fixed') {
+                        updateTeamLineItem('benefits', 'percentage', 0);
+                      } else {
+                        updateTeamLineItem('benefits', 'amount', 0);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select calculation method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixed Amount (Monthly per employee)</SelectItem>
+                      <SelectItem value="percentage">Percentage of Salary</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <Label>Percentage of Salary (%)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={data.team.benefits.percentage || ''}
-                    onChange={(e) => updateTeamLineItem('benefits', 'percentage', Number(e.target.value))}
-                  />
-                </div>
+                
+                {calculationMethods.benefits === 'fixed' ? (
+                  <div>
+                    <Label>Fixed Amount (Monthly per employee)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={data.team.benefits.amount || ''}
+                      onChange={(e) => updateTeamLineItem('benefits', 'amount', Number(e.target.value))}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Label>Percentage of Salary (%)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={data.team.benefits.percentage || ''}
+                      onChange={(e) => updateTeamLineItem('benefits', 'percentage', Number(e.target.value))}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -685,23 +746,50 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Fixed Amount (Monthly per employee)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={data.team.iqama.amount || ''}
-                    onChange={(e) => updateTeamLineItem('iqama', 'amount', Number(e.target.value))}
-                  />
+                  <Label>Calculation Method</Label>
+                  <Select 
+                    value={calculationMethods.iqama} 
+                    onValueChange={(value: 'fixed' | 'percentage') => {
+                      setCalculationMethods({...calculationMethods, iqama: value});
+                      // Reset the other value when switching methods
+                      if (value === 'fixed') {
+                        updateTeamLineItem('iqama', 'percentage', 0);
+                      } else {
+                        updateTeamLineItem('iqama', 'amount', 0);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select calculation method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixed Amount (Monthly per employee)</SelectItem>
+                      <SelectItem value="percentage">Percentage of Salary</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <Label>Percentage of Salary (%)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={data.team.iqama.percentage || ''}
-                    onChange={(e) => updateTeamLineItem('iqama', 'percentage', Number(e.target.value))}
-                  />
-                </div>
+                
+                {calculationMethods.iqama === 'fixed' ? (
+                  <div>
+                    <Label>Fixed Amount (Monthly per employee)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={data.team.iqama.amount || ''}
+                      onChange={(e) => updateTeamLineItem('iqama', 'amount', Number(e.target.value))}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Label>Percentage of Salary (%)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={data.team.iqama.percentage || ''}
+                      onChange={(e) => updateTeamLineItem('iqama', 'percentage', Number(e.target.value))}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
