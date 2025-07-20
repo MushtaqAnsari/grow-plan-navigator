@@ -58,19 +58,30 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   const addEmployee = () => {
     const newEmployee = {
       id: Date.now().toString(),
-      name: 'New Employee',
-      designation: 'Job Title',
+      name: '',
+      designation: '',
       department: 'other' as const,
       salary: 0,
       isCapitalized: false
     };
     
+    // Add new employee to the top of the list
     onChange({
       ...data,
       team: {
         ...data.team,
-        employees: [...data.team.employees, newEmployee]
+        employees: [newEmployee, ...data.team.employees]
       }
+    });
+
+    // Immediately put the new employee in edit mode
+    setEditingEmployee(newEmployee.id);
+    setEditEmployeeValues({
+      name: '',
+      designation: '',
+      department: 'other',
+      salary: 0,
+      isCapitalized: false
     });
   };
 
@@ -86,6 +97,12 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   };
 
   const saveEditEmployee = (employeeId: string) => {
+    // Validate required fields
+    if (!editEmployeeValues.name?.trim() || !editEmployeeValues.designation?.trim()) {
+      alert('Please fill in both name and designation before saving.');
+      return;
+    }
+
     const updatedEmployees = data.team.employees.map(emp =>
       emp.id === employeeId ? { ...emp, ...editEmployeeValues } : emp
     );
@@ -181,18 +198,28 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   const addConsultant = () => {
     const newConsultant = {
       id: Date.now().toString(),
-      name: 'New Consultant',
-      designation: 'Consultant Role',
+      name: '',
+      designation: '',
       department: 'other' as const,
       monthlyCost: 0
     };
     
+    // Add new consultant to the top of the list
     onChange({
       ...data,
       team: {
         ...data.team,
-        consultants: [...data.team.consultants, newConsultant]
+        consultants: [newConsultant, ...data.team.consultants]
       }
+    });
+
+    // Immediately put the new consultant in edit mode
+    setEditingConsultant(newConsultant.id);
+    setEditConsultantValues({
+      name: '',
+      designation: '',
+      department: 'other',
+      monthlyCost: 0
     });
   };
 
@@ -207,6 +234,12 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
   };
 
   const saveEditConsultant = (consultantId: string) => {
+    // Validate required fields
+    if (!editConsultantValues.name?.trim() || !editConsultantValues.designation?.trim()) {
+      alert('Please fill in both name and designation before saving.');
+      return;
+    }
+
     const updatedConsultants = data.team.consultants.map(cons =>
       cons.id === consultantId ? { ...cons, ...editConsultantValues } : cons
     );
