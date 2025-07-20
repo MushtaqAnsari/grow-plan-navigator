@@ -1341,7 +1341,7 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                         marketing: {
                           ...data.marketing,
                           [key]: {
-                            ...data.marketing[key as keyof typeof data.marketing],
+                            ...(data.marketing[key as keyof typeof data.marketing] as any),
                             year1: Number(e.target.value)
                           }
                         }
@@ -1359,7 +1359,7 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                         marketing: {
                           ...data.marketing,
                           [key]: {
-                            ...data.marketing[key as keyof typeof data.marketing],
+                            ...(data.marketing[key as keyof typeof data.marketing] as any),
                             year2: Number(e.target.value)
                           }
                         }
@@ -1377,7 +1377,7 @@ const OperationalExpenses: React.FC<OperationalExpensesProps> = ({ data, onChang
                         marketing: {
                           ...data.marketing,
                           [key]: {
-                            ...data.marketing[key as keyof typeof data.marketing],
+                            ...(data.marketing[key as keyof typeof data.marketing] as any),
                             year3: Number(e.target.value)
                           }
                         }
