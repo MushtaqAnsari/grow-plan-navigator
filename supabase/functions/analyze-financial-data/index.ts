@@ -16,8 +16,30 @@ serve(async (req) => {
 
   try {
     let requestBody;
+    
+    // Check if request has a body
+    const contentType = req.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error('Invalid content type:', contentType);
+      return new Response(JSON.stringify({ error: 'Content-Type must be application/json' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     try {
-      requestBody = await req.json();
+      const text = await req.text();
+      console.log('Request body text:', text);
+      
+      if (!text || text.trim() === '') {
+        console.error('Empty request body');
+        return new Response(JSON.stringify({ error: 'Request body is empty' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      requestBody = JSON.parse(text);
     } catch (jsonError) {
       console.error('Failed to parse JSON:', jsonError);
       return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
