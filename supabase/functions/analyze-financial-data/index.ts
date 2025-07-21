@@ -15,7 +15,25 @@ serve(async (req) => {
   }
 
   try {
-    const { financialData } = await req.json();
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (jsonError) {
+      console.error('Failed to parse JSON:', jsonError);
+      return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { financialData } = requestBody;
+
+    if (!financialData) {
+      return new Response(JSON.stringify({ error: 'financialData is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (!openAIApiKey) {
       return new Response(JSON.stringify({ error: 'OpenAI API key not configured' }), {
