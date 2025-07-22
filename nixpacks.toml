@@ -1,0 +1,11 @@
+# Force Nixpacks to use Node.js provider
+providers = ["node"]
+
+[phases.setup]
+nixPkgs = ["nodejs", "npm"]
+
+[phases.build]
+cmds = ["npm install", "npm run build"]
+
+[start]
+cmd = "npm run preview"
