@@ -1,14 +1,8 @@
 # Force Nixpacks to use Node.js provider
 providers = ["node"]
 
-[phases.setup]
-nixpkgs = ["...", "python3"]
-
-[phases.install]
-cmds = ["npm install", "npm install -g serve"]
-
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["npm install", "npm run build"]
 
 [start]
-cmd = "serve -s dist -l 8000"
+cmd = "npm run preview -- --host 0.0.0.0 --port 8000"
