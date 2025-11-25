@@ -4,13 +4,12 @@ import ValuationModel from "@/components/ValuationModel";
 import FundUtilization from "@/components/FundUtilization";
 import Valuation from "@/components/Valuation";
 import Report from "@/components/Report";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import BalanceSheet from "@/components/BalanceSheet";
-import CompanySetup from "@/components/CompanySetup";
-import FinancialModelAgent from "@/components/FinancialModelAgent";
+import ConversationalSetup from "@/components/ConversationalSetup";
 import DebugPanel from "@/components/DebugPanel";
 import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, LogOut, Bot, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -221,26 +220,38 @@ const Index = () => {
     resetSetup,
     debugInfo: financialDebug,
     currentModelId
-  } = useFinancialData(user?.id);
+  } = useFinancialData(null);
   
   const dataError = financialDebug?.error;
   const [activeTab, setActiveTab] = useState("income-statement");
-  const [showAIAgent, setShowAIAgent] = useState(false);
-  const [forceShowChoices, setForceShowChoices] = useState(false);
+  const [showSetup, setShowSetup] = useState(true);
+  const [autoStartTimer, setAutoStartTimer] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!financialData) {
+        setShowSetup(true);
+      }
+    }, 2000);
+    
+    setAutoStartTimer(timer);
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
   console.log('🎯 Index: Render state', {
-    user: !!user,
     loading,
     financialData: !!financialData,
     companyData: !!companyData,
-    showAIAgent,
-    forceShowChoices
+    showSetup
   });
 
-  const handleAIDataGenerated = async (generatedData: any) => {
+  const handleSetupComplete = async (generatedData: any) => {
     try {
-      console.log('🤖 AI Data Generated:', generatedData);
+      console.log('✅ Setup Complete:', generatedData);
       
       if (generatedData.companyData) {
         setCompanyData(generatedData.companyData);
@@ -248,96 +259,37 @@ const Index = () => {
       }
 
       if (generatedData.revenueStreams) {
-        const mappedRevenue = generatedData.revenueStreams.map((stream: any) => ({
-          ...stream,
-          type: 'saas' as const,
-          growthRate: 20,
-          arDays: 30
-        }));
-        await updateFinancialData('revenueStreams', mappedRevenue);
+        await updateFinancialData('revenueStreams', generatedData.revenueStreams);
       }
 
-      if (generatedData.costStructures) {
-        const existingCosts = financialData?.costs || {
-          revenueStreamCosts: {},
-          team: { employees: [], consultants: [], healthCare: { amount: 0, percentage: 0 }, benefits: { amount: 0, percentage: 0 }, iqama: { amount: 0, percentage: 0 }, recruitment: { year1: 0, year2: 0, year3: 0 } },
-          admin: { rent: { monthlyAmount: 0, utilitiesPercentage: 0, year1: 0, year2: 0, year3: 0 }, travel: { tripsPerMonth: 0, domesticCostPerTrip: 0, internationalCostPerTrip: 0, domesticTripsRatio: 0, year1: 0, year2: 0, year3: 0 }, insurance: { percentageOfAssets: 0, year1: 0, year2: 0, year3: 0 }, legal: { year1: 0, year2: 0, year3: 0 }, accounting: { year1: 0, year2: 0, year3: 0 }, software: { items: [], year1: 0, year2: 0, year3: 0 }, other: { year1: 0, year2: 0, year3: 0 } },
-          balanceSheet: { fixedAssets: { assets: [], year1: 0, year2: 0, year3: 0 }, accountsReceivable: { revenueStreamARs: {}, totalYear1: 0, totalYear2: 0, totalYear3: 0 }, accountsPayable: { daysForPayment: 30, year1: 0, year2: 0, year3: 0 }, cashAndBank: { year1: 0, year2: 0, year3: 0 }, inventory: { year1: 0, year2: 0, year3: 0 }, otherAssets: { year1: 0, year2: 0, year3: 0 }, otherLiabilities: { year1: 0, year2: 0, year3: 0 } },
-          marketing: { isPercentageOfRevenue: true, percentageOfRevenue: 10, manualBudget: { year1: 0, year2: 0, year3: 0 }, digitalAdvertising: { year1: 0, year2: 0, year3: 0 }, contentCreation: { year1: 0, year2: 0, year3: 0 }, events: { year1: 0, year2: 0, year3: 0 }, pr: { year1: 0, year2: 0, year3: 0 }, brandingDesign: { year1: 0, year2: 0, year3: 0 }, tools: { year1: 0, year2: 0, year3: 0 }, other: { year1: 0, year2: 0, year3: 0 } }
-        };
-        
-        const totalCostsByYear = generatedData.costStructures.reduce((acc: any, cost: any) => {
-          acc.year1 += cost.year1 || 0;
-          acc.year2 += cost.year2 || 0;
-          acc.year3 += cost.year3 || 0;
-          acc.year4 += cost.year4 || 0;
-          acc.year5 += cost.year5 || 0;
-          return acc;
-        }, { year1: 0, year2: 0, year3: 0, year4: 0, year5: 0 });
-
-        existingCosts.admin.other = {
-          year1: totalCostsByYear.year1,
-          year2: totalCostsByYear.year2,
-          year3: totalCostsByYear.year3
-        };
-        
-        await updateFinancialData('costs', existingCosts);
+      if (generatedData.costs) {
+        await updateFinancialData('costs', generatedData.costs);
       }
 
-      if (generatedData.employeePlanning) {
-        const mappedEmployees = generatedData.employeePlanning.map((emp: any) => ({
-          id: Math.random().toString(36).substr(2, 9),
-          name: emp.role,
-          designation: emp.role,
-          department: 'other' as const,
-          salary: emp.salary_per_employee || 50000,
-          isCapitalized: false
-        }));
-        await updateFinancialData('employees', mappedEmployees);
-      }
-
-      if (generatedData.fundUtilization) {
-        const totalFunding = generatedData.fundUtilization.reduce((acc: number, item: any) => acc + (item.amount || 0), 0);
-        await updateFinancialData('funding', {
-          totalFunding,
-          burnRate: totalFunding / 24,
-          useOfFunds: generatedData.fundUtilization.map((item: any) => ({
-            category: item.category,
-            percentage: item.percentage || 0,
-            amount: item.amount || 0
+      if (generatedData.funding) {
+        const fundingWithCalculatedAmounts = {
+          ...generatedData.funding,
+          useOfFunds: generatedData.funding.useOfFunds.map((item: any) => ({
+            ...item,
+            amount: (item.percentage / 100) * generatedData.funding.totalFunding
           }))
-        });
+        };
+        await updateFinancialData('funding', fundingWithCalculatedAmounts);
       }
 
-      if (generatedData.taxation) {
-        await updateFinancialData('taxation', {
-          incomeTax: {
-            enabled: generatedData.taxation.income_tax_enabled || false,
-            corporateRate: generatedData.taxation.corporate_tax_rate || 0,
-            year1: 0,
-            year2: 0,
-            year3: 0
-          },
-          zakat: {
-            enabled: generatedData.taxation.zakat_enabled || false,
-            rate: 2.5,
-            calculationMethod: 'net-worth' as const,
-            year1: 0,
-            year2: 0,
-            year3: 0
-          }
-        });
-      }
-
-      setShowAIAgent(false);
-      setForceShowChoices(false);
+      setShowSetup(false);
       setActiveTab("income-statement");
       
+      toast({
+        title: "Success! 🎉",
+        description: "Your financial model is ready to explore!",
+      });
+      
     } catch (error) {
-      console.error('Error saving AI generated data:', error);
+      console.error('Error saving setup data:', error);
       toast({
         title: "Error",
-        description: "Failed to save generated data. Please try again.",
+        description: "Failed to save your data. Please try again.",
         variant: "destructive",
       });
     }
@@ -346,8 +298,7 @@ const Index = () => {
   const handleResetSetup = () => {
     console.log('🔄 Resetting setup');
     resetSetup();
-    setForceShowChoices(true);
-    setShowAIAgent(false);
+    setShowSetup(true);
     setActiveTab("income-statement");
   };
 
@@ -495,115 +446,10 @@ const Index = () => {
           </div>
         </div>
 
-        {showAIAgent ? (
-          <FinancialModelAgent 
-            onDataGenerated={handleAIDataGenerated}
-            onSwitchToManual={() => {
-              setShowAIAgent(false);
-              setForceShowChoices(true);
-            }}
-          />
-        ) : (!companyData || forceShowChoices) ? (
-          <div className="space-y-6">
-            <Card className="max-w-2xl mx-auto shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-              <CardHeader className="text-center bg-gradient-to-r from-primary/5 to-blue-50 rounded-t-xl">
-                <CardTitle className="text-2xl mb-2 flex items-center justify-center gap-3">
-                  <Bot className="w-8 h-8 text-primary" />
-                  Welcome to Financial Model Builder
-                </CardTitle>
-                <CardDescription>
-                  Choose how you'd like to create your financial model
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Button
-                    variant="outline"
-                    className="h-32 flex flex-col items-center justify-center gap-4 hover:bg-primary/5 border-2 hover:border-primary/20 transition-all duration-200"
-                    onClick={() => {
-                      setShowAIAgent(true);
-                      setForceShowChoices(false);
-                    }}
-                  >
-                    <Bot className="h-8 w-8 text-primary" />
-                    <div className="text-center">
-                      <div className="font-semibold text-lg">AI Financial Agent</div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Describe your needs, get instant model
-                      </div>
-                      <div className="text-xs text-primary mt-2 font-medium">
-                        ✨ Recommended for quick setup
-                      </div>
-                    </div>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="h-32 flex flex-col items-center justify-center gap-4 hover:bg-slate-50 border-2 hover:border-slate-200 transition-all duration-200"
-                    onClick={() => {
-                      setShowAIAgent(false);
-                      setForceShowChoices(false);
-                    }}
-                  >
-                    <FileText className="h-8 w-8 text-slate-600" />
-                    <div className="text-center">
-                      <div className="font-semibold text-lg">Manual Entry</div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Build step-by-step manually
-                      </div>
-                      <div className="text-xs text-slate-600 mt-2">
-                        Full control over every detail
-                      </div>
-                    </div>
-                  </Button>
-                </div>
-                
-                {companyData && (
-                  <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-700 mb-2">
-                      <strong>Existing setup found:</strong> {companyData.companyName}
-                    </p>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={() => setForceShowChoices(false)}
-                      className="text-blue-600 p-0 h-auto"
-                    >
-                      Continue with existing setup →
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {!forceShowChoices && (
-              <CompanySetup onSetupComplete={(data) => {
-                setCompanyData(data);
-                setIndustry(data.industry);
-                
-                // Save company data with planning period to financial data
-                updateFinancialData('companyData', {
-                  companyName: data.companyName,
-                  industry: data.industry,
-                  currency: data.currency,
-                  language: data.language,
-                  planningPeriod: data.planningPeriod || 3
-                });
-                
-                if (data.companyName === "CyberLabs") {
-                  const demoData = createCyberLabsDemoData();
-                  Object.keys(demoData).forEach(key => {
-                    updateFinancialData(key as keyof FinancialData, demoData[key as keyof FinancialData]);
-                  });
-                }
-                
-                setActiveTab("income-statement");
-                setForceShowChoices(false);
-              }} />
-            )}
-          </div>
+        {showSetup || !financialData ? (
+          <ConversationalSetup onComplete={handleSetupComplete} />
         ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">{/* ... keep existing code */}
             <div className="flex justify-between items-center mb-6">
               <div className="bg-white rounded-lg p-4 shadow-sm border flex items-center gap-6">
                 <div className="flex items-center gap-3">
@@ -632,7 +478,7 @@ const Index = () => {
                   variant="outline" 
                   size="sm"
                   className="flex items-center gap-2"
-                  onClick={() => setForceShowChoices(true)}
+                  onClick={() => setShowSetup(true)}
                 >
                   <Bot className="w-4 h-4" />
                   AI Agent
