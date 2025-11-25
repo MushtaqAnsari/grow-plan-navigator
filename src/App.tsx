@@ -23,31 +23,14 @@ function LoadingSpinner() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-  
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-  
   return <>{children}</>;
 }
 
 function AppContent() {
-  const { loading } = useAuth();
-  
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-  
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+        <Route path="/" element={<Index />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
