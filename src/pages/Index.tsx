@@ -10,13 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import BalanceSheet from "@/components/BalanceSheet";
 import ConversationalSetup from "@/components/ConversationalSetup";
-import DebugPanel from "@/components/DebugPanel";
-import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, LogOut, Bot, AlertCircle } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useFinancialData } from "@/hooks/useFinancialData";
-import ErrorMessage from "@/components/ErrorMessage";
+import { BarChart3, FileText, TrendingUp, Users, DollarSign, Target, Building2, Settings, Bot, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { createCyberLabsDemoData, createCyberLabsCompanyData } from "@/utils/demoData";
 
 export interface FinancialData {
@@ -208,216 +203,68 @@ export interface FinancialData {
 }
 
 const Index = () => {
-  const { user, signOut, error: authError, debugInfo: authDebug } = useAuth();
-  const { 
-    financialData, 
-    loading, 
-    updateFinancialData, 
-    companyData, 
-    setCompanyData, 
-    industry, 
-    setIndustry,
-    resetSetup,
-    debugInfo: financialDebug,
-    currentModelId
-  } = useFinancialData(null);
-  
-  const dataError = financialDebug?.error;
   const [activeTab, setActiveTab] = useState("income-statement");
   const [showSetup, setShowSetup] = useState(true);
-  const [autoStartTimer, setAutoStartTimer] = useState<NodeJS.Timeout | null>(null);
+  const [financialData, setFinancialData] = useState<FinancialData | null>(null);
+  const [companyData, setCompanyData] = useState<any>(null);
+  const [industry, setIndustry] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!financialData) {
-        setShowSetup(true);
-      }
+      setShowSetup(true);
     }, 2000);
     
-    setAutoStartTimer(timer);
-    
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, []);
 
-  console.log('🎯 Index: Render state', {
-    loading,
-    financialData: !!financialData,
-    companyData: !!companyData,
-    showSetup
-  });
+  const updateFinancialData = (key: keyof FinancialData, value: any) => {
+    setFinancialData(prev => ({
+      ...prev!,
+      [key]: value
+    }));
+  };
 
-  const handleSetupComplete = async (generatedData: any) => {
-    try {
-      console.log('✅ Setup Complete:', generatedData);
-      
-      if (generatedData.companyData) {
-        setCompanyData(generatedData.companyData);
-        setIndustry(generatedData.companyData.industry);
-      }
-
-      if (generatedData.revenueStreams) {
-        await updateFinancialData('revenueStreams', generatedData.revenueStreams);
-      }
-
-      if (generatedData.costs) {
-        await updateFinancialData('costs', generatedData.costs);
-      }
-
-      if (generatedData.funding) {
-        const fundingWithCalculatedAmounts = {
-          ...generatedData.funding,
-          useOfFunds: generatedData.funding.useOfFunds.map((item: any) => ({
-            ...item,
-            amount: (item.percentage / 100) * generatedData.funding.totalFunding
-          }))
-        };
-        await updateFinancialData('funding', fundingWithCalculatedAmounts);
-      }
-
-      setShowSetup(false);
-      setActiveTab("income-statement");
-      
-      toast({
-        title: "Success! 🎉",
-        description: "Your financial model is ready to explore!",
-      });
-      
-    } catch (error) {
-      console.error('Error saving setup data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save your data. Please try again.",
-        variant: "destructive",
-      });
+  const handleSetupComplete = (generatedData: any) => {
+    console.log('✅ Setup Complete:', generatedData);
+    
+    if (generatedData.companyData) {
+      setCompanyData(generatedData.companyData);
+      setIndustry(generatedData.companyData.industry);
     }
+
+    const fullData: FinancialData = {
+      companyData: generatedData.companyData,
+      revenueStreams: generatedData.revenueStreams || [],
+      costs: generatedData.costs,
+      loansAndFinancing: {
+        loans: [],
+        totalInterestExpense: { year1: 0, year2: 0, year3: 0 }
+      },
+      taxation: {
+        incomeTax: { enabled: false, corporateRate: 0, year1: 0, year2: 0, year3: 0 },
+        zakat: { enabled: false, rate: 2.5, calculationMethod: 'net-worth', year1: 0, year2: 0, year3: 0 }
+      },
+      employees: generatedData.costs?.team?.employees || [],
+      funding: generatedData.funding
+    };
+
+    setFinancialData(fullData);
+    setShowSetup(false);
+    setActiveTab("income-statement");
+    
+    toast({
+      title: "Success! 🎉",
+      description: "Your financial model is ready to explore!",
+    });
   };
 
   const handleResetSetup = () => {
-    console.log('🔄 Resetting setup');
-    resetSetup();
+    setFinancialData(null);
+    setCompanyData(null);
     setShowSetup(true);
     setActiveTab("income-statement");
   };
-
-  const handleRefreshData = () => {
-    console.log('🔄 Refreshing data');
-    window.location.reload();
-  };
-
-  // Show authentication error if any
-  if (authError) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <ErrorMessage 
-          error={authError} 
-          context="auth"
-          onRetry={() => window.location.reload()}
-        />
-      </div>
-    );
-  }
-
-  // Show data error if any
-  if (dataError && user && !loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <DebugPanel
-          authDebug={authDebug}
-          financialDebug={financialDebug}
-          onRefresh={handleRefreshData}
-          onReset={handleResetSetup}
-        />
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <ErrorMessage 
-            error={dataError} 
-            context="data"
-            onRetry={() => window.location.reload()}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 mb-2">Loading your financial data...</p>
-          {financialDebug?.loadingState && (
-            <p className="text-xs text-slate-500">
-              Status: {financialDebug.loadingState.replace(/_/g, ' ')}
-            </p>
-          )}
-        </div>
-        <DebugPanel
-          authDebug={authDebug}
-          financialDebug={financialDebug}
-          onRefresh={handleRefreshData}
-          onReset={handleResetSetup}
-        />
-      </div>
-    );
-  }
-
-  if (!financialData && financialDebug?.error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="w-5 h-5" />
-              Loading Error
-            </CardTitle>
-            <CardDescription>
-              Unable to load your financial data
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-3 bg-red-50 rounded-lg text-sm text-red-700">
-              {financialDebug.error}
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleRefreshData} className="flex-1">
-                Try Again
-              </Button>
-              <Button variant="outline" onClick={handleResetSetup} className="flex-1">
-                Reset Setup
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        <DebugPanel
-          authDebug={authDebug}
-          financialDebug={financialDebug}
-          onRefresh={handleRefreshData}
-          onReset={handleResetSetup}
-        />
-      </div>
-    );
-  }
-
-  if (!financialData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-slate-600">Unable to load financial data. Please try again.</p>
-          <Button onClick={handleRefreshData} className="mt-4">
-            Retry
-          </Button>
-        </div>
-        <DebugPanel
-          authDebug={authDebug}
-          financialDebug={financialDebug}
-          onRefresh={handleRefreshData}
-          onReset={handleResetSetup}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -432,17 +279,6 @@ const Index = () => {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-600">
-              {user?.email}
-            </span>
-            <Button 
-              variant="outline" 
-              onClick={signOut}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </Button>
           </div>
         </div>
 
@@ -560,8 +396,8 @@ const Index = () => {
               <IncomeStatement 
                 data={financialData}
                 onUpdateData={updateFinancialData}
-                financialModelId={currentModelId || ''}
-                userId={user?.id || ''}
+                financialModelId=""
+                userId=""
               />
             </TabsContent>
 
@@ -672,13 +508,6 @@ const Index = () => {
             </TabsContent>
           </Tabs>
         )}
-
-        <DebugPanel
-          authDebug={authDebug}
-          financialDebug={financialDebug}
-          onRefresh={handleRefreshData}
-          onReset={handleResetSetup}
-        />
       </div>
     </div>
   );
